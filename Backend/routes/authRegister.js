@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
-
-// Impor controller yang sudah kita pisah
-const { register } = require('../controllers/authRegister');
+const { register, verifyEmail } = require('../controllers/authRegister');
 
 // Definisikan route untuk register
 // Method: POST, Endpoint: /register
@@ -15,6 +13,7 @@ router.post('/register', [
     check('password', 'Password minimal 6 karakter').isLength({ min: 6 })
 ], register);
 
+router.post('/verify-email', verifyEmail);
 
 // Export router
 module.exports = router;

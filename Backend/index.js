@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
+const userRoutes = require('./routes/userRoutes');
 require('dotenv').config();
 require('./config/passport');
 
@@ -15,7 +16,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-
+app.use('/api/users', userRoutes); // <-- Tambahkan ini
 app.use('/api/auth', authRegisterRoutes);
 app.use('/api/auth', authLoginRoutes);
 app.use('/api/auth', authGoogle);
