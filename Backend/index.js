@@ -10,6 +10,8 @@ require('./config/passport');
 const authRegisterRoutes = require('./routes/authRegister');
 const authLoginRoutes = require('./routes/authLogin');
 const authGoogle = require('./routes/authGoogle');
+const addressRoutes = require('./routes/addressRoutes');
+const wilayahRoutes = require('./routes/wilayahRoutes');
 
 const app = express();
 
@@ -20,6 +22,9 @@ app.use('/api/users', userRoutes); // <-- Tambahkan ini
 app.use('/api/auth', authRegisterRoutes);
 app.use('/api/auth', authLoginRoutes);
 app.use('/api/auth', authGoogle);
+app.use('/api/addresses', addressRoutes);
+app.use('/api/wilayah', wilayahRoutes);
+
 
 // Jalankan Server
 const PORT = process.env.PORT || 5000;
