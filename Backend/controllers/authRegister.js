@@ -12,7 +12,7 @@ const register = async (req, res) => {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { fullName, phoneNumber, email, password } = req.body;
+    const { fullName, phoneNumber, email, password, jenisKelamin, tanggalLahir } = req.body;
 
     try {
         // ... (Cek existingUser masih sama)
@@ -24,11 +24,14 @@ const register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Simpan user ke database (tanpa OTP)
-        const [result] = await pool.query(
-            "INSERT INTO users (full_name, phone_number, email, password) VALUES (?, ?, ?, ?)",
-            [fullName, phoneNumber, email, hashedPassword]
-        );
+        const sqlQuery = `
+            INSERT INTO users 
+                (full_name, phone_number, email, password, gender, birth_date) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const values = [fullName, phoneNumber, email, hashedPassword, jenisKelamin, tanggalLahir];
+
+        const [result] = await pool.query(sqlQuery, values);
         const userId = result.insertId;
 
         // Buat token verifikasi menggunakan JWT
