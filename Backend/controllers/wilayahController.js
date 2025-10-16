@@ -1,29 +1,35 @@
 // controllers/wilayahController.js
 const axios = require('axios');
 
-// Ambil API Key dari environment variable
 const API_KEY = process.env.BINDERBYTE_API_KEY;
 const BASE_URL = 'https://api.binderbyte.com/wilayah';
 
-// Fungsi generik untuk memanggil API
 const callBinderByteAPI = async (endpoint, res) => {
     try {
         const url = `${BASE_URL}${endpoint}&api_key=${API_KEY}`;
+        
+        // --- TAMBAHAN UNTUK DEBUGGING ---
+        console.log(`[DEBUG] Memanggil URL BinderByte: ${url}`);
+        // --------------------------------
+
         const response = await axios.get(url);
         
-        // Cek jika response dari BinderByte tidak sukses
         if (response.data.code !== "200") {
             return res.status(400).json({ status: 'fail', message: response.data.message });
         }
         
-        res.json(response.data); // Kirim data asli dari BinderByte ke frontend
+        res.json(response.data);
     } catch (error) {
         console.error("BinderByte API error:", error.message);
+        // Cek jika errornya adalah 404 dari Axios
+        if (error.response && error.response.status === 404) {
+            return res.status(404).json({ status: 'fail', message: 'Data wilayah tidak ditemukan. Pastikan ID yang digunakan valid.' });
+        }
         res.status(500).json({ status: 'error', message: 'Gagal mengambil data wilayah' });
     }
 };
 
-// --- Kumpulan Fungsi untuk setiap tingkatan wilayah ---
+// --- Fungsi lainnya (getProvinces, getCities, dll) tetap sama ---
 
 exports.getProvinces = (req, res) => {
     callBinderByteAPI('/provinsi?', res);
