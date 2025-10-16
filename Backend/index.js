@@ -12,6 +12,7 @@ const authLoginRoutes = require('./routes/authLogin');
 const authGoogle = require('./routes/authGoogle');
 const addressRoutes = require('./routes/addressRoutes');
 const wilayahRoutes = require('./routes/wilayahRoutes');
+const sellerRoutes = require('./routes/sellerRoutes');
 
 const app = express();
 
@@ -24,7 +25,7 @@ app.use('/api/auth', authLoginRoutes);
 app.use('/api/auth', authGoogle);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/wilayah', wilayahRoutes);
-
+app.use('/api/sellers', sellerRoutes);
 
 // Jalankan Server
 const PORT = process.env.PORT || 5000;
