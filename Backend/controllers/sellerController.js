@@ -158,3 +158,136 @@ exports.updateStoreDetails = async (req, res) => {
         res.status(500).json({ message: "Terjadi kesalahan pada server." });
     }
 };
+
+// Fungsi baru untuk mendapatkan semua pengaturan toko
+exports.getStoreSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Query untuk mengambil data dari tabel 'stores' dan 'store_about_pages' sekaligus
+        const sql = `
+            SELECT 
+                s.name, s.description, s.business_phone, s.profile_image_url, s.background_image_url,
+                s.is_on_holiday, s.holiday_start_date, s.holiday_end_date, s.show_phone_number,
+                ap.title AS about_title, ap.thumbnail_url AS about_thumbnail_url, ap.content AS about_content
+            FROM stores s
+            LEFT JOIN store_about_pages ap ON s.id = ap.store_id
+            WHERE s.user_id = ?
+        `;
+
+        const [rows] = await db.execute(sql, [userId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+
+        res.status(200).json(rows[0]);
+
+    } catch (error) {
+        console.error("Error saat mengambil pengaturan toko:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+// Fungsi baru untuk mengupdate pengaturan umum (libur, dll)
+exports.updateStoreSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { is_on_holiday, holiday_start_date, holiday_end_date, show_phone_number } = req.body;
+
+        // Ambil store_id berdasarkan user_id
+        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+        
+        // Validasi sederhana: jika is_on_holiday=true, tanggal harus ada
+        if (is_on_holiday && (!holiday_start_date || !holiday_end_date)) {
+            return res.status(400).json({ message: "Tanggal mulai dan akhir libur wajib diisi saat mode libur aktif." });
+        }
+
+        const sql = `
+            UPDATE stores SET 
+                is_on_holiday = ?, 
+                holiday_start_date = ?, 
+                holiday_end_date = ?, 
+                show_phone_number = ?
+            WHERE id = ?
+        `;
+        
+        // Jika mode libur tidak aktif, paksa tanggal menjadi NULL
+        const params = [
+            is_on_holiday,
+            is_on_holiday ? holiday_start_date : null,
+            is_on_holiday ? holiday_end_date : null,
+            show_phone_number,
+            storeId
+        ];
+        
+        await db.execute(sql, params);
+
+        res.status(200).json({ message: "Pengaturan toko berhasil diperbarui." });
+
+    } catch (error) {
+        console.error("Error saat update pengaturan toko:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+
+// Fungsi baru untuk membuat atau mengupdate halaman "Tentang Toko"
+exports.createOrUpdateAboutPage = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { title, content } = req.body;
+
+        // 1. Validasi Input
+        if (!title || !content) {
+            return res.status(400).json({ message: "Judul dan Isi Konten wajib diisi." });
+        }
+        
+        // 2. Dapatkan ID Toko
+        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+
+        // 3. Cek apakah halaman "Tentang" sudah ada
+        const [aboutPages] = await db.execute('SELECT id, thumbnail_url FROM store_about_pages WHERE store_id = ?', [storeId]);
+        const aboutPageExists = aboutPages.length > 0;
+
+        // 4. Tentukan URL thumbnail
+        let thumbnailUrl;
+        if (req.file) { // Jika ada file baru yang di-upload
+            thumbnailUrl = `/uploads/about_thumbnails/${req.file.filename}`;
+        } else if (aboutPageExists) { // Jika tidak ada file baru, pakai yang lama
+            thumbnailUrl = aboutPages[0].thumbnail_url;
+        } else { // Jika tidak ada file baru dan ini entri baru, maka error
+            return res.status(400).json({ message: "Thumbnail wajib di-upload." });
+        }
+
+        // 5. Lakukan Operasi INSERT atau UPDATE (Logika "UPSERT")
+        if (aboutPageExists) {
+            // UPDATE data yang ada
+            const sql = `
+                UPDATE store_about_pages SET title = ?, content = ?, thumbnail_url = ? 
+                WHERE store_id = ?
+            `;
+            await db.execute(sql, [title, content, thumbnailUrl, storeId]);
+            res.status(200).json({ message: "Halaman 'Tentang Toko' berhasil diperbarui." });
+        } else {
+            // INSERT data baru
+            const sql = `
+                INSERT INTO store_about_pages (store_id, title, content, thumbnail_url) 
+                VALUES (?, ?, ?, ?)
+            `;
+            await db.execute(sql, [storeId, title, content, thumbnailUrl]);
+            res.status(201).json({ message: "Halaman 'Tentang Toko' berhasil dibuat." });
+        }
+    } catch (error) {
+        console.error("Error saat update halaman 'Tentang Toko':", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
