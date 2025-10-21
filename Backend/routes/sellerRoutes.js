@@ -6,7 +6,11 @@ const path = require('path');
 const sellerController = require('../controllers/sellerController');
 const { protect } = require('../middleware/authMiddleware');
 
+// === IMPORT ROUTE BARU ===
+const storeSettingsRoutes = require('./storeSettings'); // <-- TAMBAHKAN INI
+
 // === KONFIGURASI MULTER LAMA (UNTUK PROFIL & BACKGROUND TOKO) ===
+// (Ini TETAP di sini)
 const storeImageStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/stores/'),
     filename: (req, file, cb) => {
@@ -17,15 +21,9 @@ const storeImageStorage = multer.diskStorage({
 const uploadStoreImages = multer({ storage: storeImageStorage });
 
 
-// === KONFIGURASI MULTER BARU (UNTUK THUMBNAIL HALAMAN 'TENTANG') ===
-const aboutPageStorage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/about_thumbnails/'), // Folder terpisah
-    filename: (req, file, cb) => {
-        const uniqueSuffix = req.user.id + '-' + Date.now();
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-const uploadAboutThumbnail = multer({ storage: aboutPageStorage });
+// === KONFIGURASI MULTER BARU (UNTUK THUMBNAIL) ===
+// (Kode multer 'aboutPageStorage' dan 'uploadAboutThumbnail' DIHAPUS dari sini)
+
 
 // === ROUTES YANG SUDAH ADA ===
 router.post('/register', protect, sellerController.registerSeller);
@@ -42,21 +40,13 @@ router.put(
 
 // === ROUTES BARU UNTUK PENGATURAN TOKO ===
 
-// 1. GET - Mendapatkan semua informasi & pengaturan toko saat ini
-// Berguna untuk mengisi form di halaman pengaturan
-router.get('/stores/me/settings', protect, sellerController.getStoreSettings);
+// (SEMUA route di bawah ini: GET /stores/me/settings, PUT /stores/me/settings,
+//  dan PUT /stores/me/about DIHAPUS dari sini)
 
-// 2. PUT - Mengupdate pengaturan umum (Mode Libur & Tampilkan No. Telp)
-// Endpoint ini khusus untuk data non-file agar lebih ringan
-router.put('/stores/me/settings', protect, sellerController.updateStoreSettings);
-
-// 3. PUT - Membuat atau Mengupdate Halaman "Tentang Toko"
-// Menggunakan PUT karena sifatnya "create or update" (idempotent)
-router.put(
-    '/stores/me/about', 
-    protect, 
-    uploadAboutThumbnail.single('thumbnail'), // Handle satu file 'thumbnail'
-    sellerController.createOrUpdateAboutPage
-);
+// === SAMBUNGKAN SUB-ROUTER PENGATURAN ===
+// Ini akan memberitahu Express untuk menggunakan 'storeSettingsRoutes'
+// untuk path apapun yang dimulai dengan '/stores/me'
+// Ini harus dipasang SETELAH route '/stores/me' di atas.
+router.use('/stores/me', protect, storeSettingsRoutes); // <-- TAMBAHKAN INI
 
 module.exports = router;
