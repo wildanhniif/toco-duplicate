@@ -1,0 +1,284 @@
+// controllers/storeSettings.js
+const db = require('../config/database');
+
+// Fungsi ini dipindahkan dari sellerController.js
+exports.getStoreSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Query untuk mengambil data dari tabel 'stores' dan 'store_about_pages' sekaligus
+        const sql = `
+            SELECT 
+                s.name, s.description, s.business_phone, s.profile_image_url, s.background_image_url,
+                s.is_on_holiday, s.holiday_start_date, s.holiday_end_date, s.show_phone_number,
+                ap.title AS about_title, ap.thumbnail_url AS about_thumbnail_url, ap.content AS about_content
+            FROM stores s
+            LEFT JOIN store_about_pages ap ON s.id = ap.store_id
+            WHERE s.user_id = ?
+        `;
+
+        const [rows] = await db.execute(sql, [userId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+
+        res.status(200).json(rows[0]);
+
+    } catch (error) {
+        console.error("Error saat mengambil pengaturan toko:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+// Fungsi ini dipindahkan dari sellerController.js
+exports.updateStoreSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { is_on_holiday, holiday_start_date, holiday_end_date, show_phone_number } = req.body;
+
+        // Ambil store_id berdasarkan user_id
+        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+        
+        // Validasi sederhana: jika is_on_holiday=true, tanggal harus ada
+        if (is_on_holiday && (!holiday_start_date || !holiday_end_date)) {
+            return res.status(400).json({ message: "Tanggal mulai dan akhir libur wajib diisi saat mode libur aktif." });
+        }
+
+        const sql = `
+            UPDATE stores SET 
+                is_on_holiday = ?, 
+                holiday_start_date = ?, 
+                holiday_end_date = ?, 
+                show_phone_number = ?
+            WHERE id = ?
+        `;
+        
+        // Jika mode libur tidak aktif, paksa tanggal menjadi NULL
+        const params = [
+            is_on_holiday,
+            is_on_holiday ? holiday_start_date : null,
+            is_on_holiday ? holiday_end_date : null,
+            show_phone_number,
+            storeId
+        ];
+        
+        await db.execute(sql, params);
+
+        res.status(200).json({ message: "Pengaturan toko berhasil diperbarui." });
+
+    } catch (error) {
+        console.error("Error saat update pengaturan toko:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+
+// Fungsi ini dipindahkan dari sellerController.js
+exports.createOrUpdateAboutPage = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { title, content } = req.body;
+
+        // 1. Validasi Input
+        if (!title || !content) {
+            return res.status(400).json({ message: "Judul dan Isi Konten wajib diisi." });
+        }
+        
+        // 2. Dapatkan ID Toko
+        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+
+        // 3. Cek apakah halaman "Tentang" sudah ada
+        const [aboutPages] = await db.execute('SELECT id, thumbnail_url FROM store_about_pages WHERE store_id = ?', [storeId]);
+        const aboutPageExists = aboutPages.length > 0;
+
+        // 4. Tentukan URL thumbnail
+        let thumbnailUrl;
+        if (req.file) { // Jika ada file baru yang di-upload
+            thumbnailUrl = `/uploads/about_thumbnails/${req.file.filename}`;
+        } else if (aboutPageExists) { // Jika tidak ada file baru, pakai yang lama
+            thumbnailUrl = aboutPages[0].thumbnail_url;
+        } else { // Jika tidak ada file baru dan ini entri baru, maka error
+            return res.status(400).json({ message: "Thumbnail wajib di-upload." });
+        }
+
+        // 5. Lakukan Operasi INSERT atau UPDATE (Logika "UPSERT")
+        if (aboutPageExists) {
+            // UPDATE data yang ada
+            const sql = `
+                UPDATE store_about_pages SET title = ?, content = ?, thumbnail_url = ? 
+                WHERE store_id = ?
+            `;
+            await db.execute(sql, [title, content, thumbnailUrl, storeId]);
+            res.status(200).json({ message: "Halaman 'Tentang Toko' berhasil diperbarui." });
+        } else {
+            // INSERT data baru
+            const sql = `
+                INSERT INTO store_about_pages (store_id, title, content, thumbnail_url) 
+                VALUES (?, ?, ?, ?)
+            `;
+            await db.execute(sql, [storeId, title, content, thumbnailUrl]);
+            res.status(201).json({ message: "Halaman 'Tentang Toko' berhasil dibuat." });
+        }
+    } catch (error) {
+        console.error("Error saat update halaman 'Tentang Toko':", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+// ===========================================
+// === FUNGSI BARU UNTUK KURIR TOKO (GET) ===
+// ===========================================
+exports.getStoreCourierSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Dapatkan store_id
+        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+
+        // 2. Dapatkan pengaturan utama kurir toko
+        const [settings] = await db.execute(
+            'SELECT id, is_active, max_delivery_km FROM store_courier_settings WHERE store_id = ?',
+            [storeId]
+        );
+
+        // Jika belum ada pengaturan, kirim data default (kosong)
+        if (settings.length === 0) {
+            return res.status(200).json({
+                is_active: false,
+                max_delivery_km: 0,
+                distance_rates: [],
+                weight_rates: []
+            });
+        }
+
+        const settingId = settings[0].id;
+
+        // 3. Dapatkan data ongkir berdasarkan jarak
+        const [distanceRates] = await db.execute(
+            'SELECT from_km, to_km, price FROM store_courier_distance_rates WHERE setting_id = ? ORDER BY from_km ASC',
+            [settingId]
+        );
+
+        // 4. Dapatkan data ongkir tambahan berdasarkan berat
+        const [weightRates] = await db.execute(
+            'SELECT above_weight_gr, additional_price FROM store_courier_weight_rates WHERE setting_id = ? ORDER BY above_weight_gr ASC',
+            [settingId]
+        );
+        
+        // 5. Gabungkan semua data dan kirim
+        res.status(200).json({
+            is_active: settings[0].is_active,
+            max_delivery_km: settings[0].max_delivery_km,
+            distance_rates: distanceRates,
+            weight_rates: weightRates
+        });
+
+    } catch (error) {
+        console.error("Error saat mengambil pengaturan kurir toko:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+
+// =============================================
+// === FUNGSI BARU UNTUK KURIR TOKO (UPDATE) ===
+// =============================================
+exports.updateStoreCourierSettings = async (req, res) => {
+    const userId = req.user.id;
+    const { 
+        is_active,          // boolean: (Aktifkan kurir toko)
+        max_delivery_km,    // number: (Batas pengiriman ...km)
+        distance_rates,     // array: [{ from_km, to_km, price }]
+        weight_rates        // array: [{ above_weight_gr, additional_price }]
+    } = req.body;
+
+    // Mulai transaksi database
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+        // 1. Dapatkan store_id
+        const [stores] = await connection.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+
+        // 2. Validasi Input
+        if (is_active && (!max_delivery_km || max_delivery_km <= 0)) {
+            await connection.rollback();
+            return res.status(400).json({ message: "Batas pengiriman (km) wajib diisi jika kurir toko aktif." });
+        }
+        if (is_active && (!distance_rates || distance_rates.length === 0)) {
+            await connection.rollback();
+            return res.status(400).json({ message: "Pengaturan ongkir jarak wajib diisi jika kurir toko aktif." });
+        }
+
+        // 3. Logika "UPSERT" (Update or Insert) untuk pengaturan utama
+        // Ini akan membuat data baru jika belum ada, atau update jika sudah ada
+        const [upsertResult] = await connection.execute(
+            `INSERT INTO store_courier_settings (store_id, is_active, max_delivery_km) 
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE is_active = ?, max_delivery_km = ?`,
+            [storeId, is_active, max_delivery_km, is_active, max_delivery_km]
+        );
+        
+        // Dapatkan ID dari pengaturan yang baru saja di-insert atau di-update
+        const settingId = upsertResult.insertId > 0 ? upsertResult.insertId : (await connection.execute(
+            'SELECT id FROM store_courier_settings WHERE store_id = ?', [storeId]
+        ))[0][0].id;
+
+        // --- TRANSAKSI PENGATURAN JARAK ---
+        // 4. Hapus semua data ongkir jarak yang lama (agar bersih)
+        await connection.execute('DELETE FROM store_courier_distance_rates WHERE setting_id = ?', [settingId]);
+
+        // 5. Masukkan data ongkir jarak yang baru (jika ada)
+        if (is_active && distance_rates && distance_rates.length > 0) {
+            const distanceValues = distance_rates.map(rate => [settingId, rate.from_km, rate.to_km, rate.price]);
+            await connection.query(
+                'INSERT INTO store_courier_distance_rates (setting_id, from_km, to_km, price) VALUES ?',
+                [distanceValues]
+            );
+        }
+
+        // --- TRANSAKSI PENGATURAN BERAT ---
+        // 6. Hapus semua data ongkir berat yang lama
+        await connection.execute('DELETE FROM store_courier_weight_rates WHERE setting_id = ?', [settingId]);
+        
+        // 7. Masukkan data ongkir berat yang baru (jika ada)
+        if (is_active && weight_rates && weight_rates.length > 0) {
+            const weightValues = weight_rates.map(rate => [settingId, rate.above_weight_gr, rate.additional_price]);
+            await connection.query(
+                'INSERT INTO store_courier_weight_rates (setting_id, above_weight_gr, additional_price) VALUES ?',
+                [weightValues]
+            );
+        }
+
+        // 8. Jika semua berhasil, commit transaksi
+        await connection.commit();
+        res.status(200).json({ message: "Pengaturan kurir toko berhasil diperbarui." });
+
+    } catch (error) {
+        // 9. Jika ada satu saja error, batalkan semua perubahan
+        await connection.rollback();
+        console.error("Error saat update pengaturan kurir toko:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    } finally {
+        // 10. Selalu lepaskan koneksi
+        connection.release();
+    }
+};
