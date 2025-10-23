@@ -8,6 +8,7 @@ const { protect } = require('../middleware/authMiddleware');
 
 // === IMPORT ROUTE BARU ===
 const storeSettingsRoutes = require('./storeSettings'); // <-- TAMBAHKAN INI
+const templateRoutes = require('./templateRoutes');
 
 // === KONFIGURASI MULTER LAMA (UNTUK PROFIL & BACKGROUND TOKO) ===
 // (Ini TETAP di sini)
@@ -48,5 +49,6 @@ router.put(
 // untuk path apapun yang dimulai dengan '/stores/me'
 // Ini harus dipasang SETELAH route '/stores/me' di atas.
 router.use('/stores/me', protect, storeSettingsRoutes); // <-- TAMBAHKAN INI
+router.use('/stores/me/templates', protect, templateRoutes);
 
 module.exports = router;
