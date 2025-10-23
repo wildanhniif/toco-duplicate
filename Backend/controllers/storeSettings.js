@@ -282,3 +282,124 @@ exports.updateStoreCourierSettings = async (req, res) => {
         connection.release();
     }
 };
+
+// ==========================================================
+// === FUNGSI BARU UNTUK JASA PENGIRIMAN PIHAK KETIGA (GET) ===
+// ==========================================================
+exports.getAvailableCouriers = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Dapatkan store_id (opsional, jika toko belum ada, tetap tampilkan list)
+        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        const storeId = stores.length > 0 ? stores[0].id : null;
+
+        // 2. Ambil semua data kurir dan layanannya dalam satu query
+        const sql = `
+            SELECT 
+                c.id as courier_id, c.code as courier_code, c.name as courier_name,
+                cs.id as service_id, cs.code as service_code, cs.name as service_name
+            FROM couriers c
+            JOIN courier_services cs ON c.id = cs.courier_id
+            WHERE c.is_active = 1 AND cs.is_active = 1
+            ORDER BY c.name ASC, cs.name ASC
+        `;
+        const [allServices] = await db.execute(sql);
+
+        // 3. Ambil layanan yang sudah dipilih oleh toko ini (jika tokonya ada)
+        let selectedServiceIds = new Set(); // Gunakan Set untuk pencarian cepat (O(1))
+        if (storeId) {
+            const [selected] = await db.execute(
+                'SELECT service_id FROM store_selected_services WHERE store_id = ?',
+                [storeId]
+            );
+            selected.forEach(s => selectedServiceIds.add(s.service_id));
+        }
+
+        // 4. Proses data menjadi format JSON yang rapi (grouping by courier)
+        const couriersMap = new Map();
+        allServices.forEach(service => {
+            // Jika kurir belum ada di map, tambahkan
+            if (!couriersMap.has(service.courier_id)) {
+                couriersMap.set(service.courier_id, {
+                    id: service.courier_id,
+                    code: service.courier_code,
+                    name: service.courier_name,
+                    services: []
+                });
+            }
+
+            // Tambahkan layanan ke kurir yang sesuai
+            couriersMap.get(service.courier_id).services.push({
+                id: service.service_id,
+                code: service.service_code,
+                name: service.service_name,
+                // Cek apakah ID layanan ini ada di Set layanan yang sudah dipilih
+                isSelected: selectedServiceIds.has(service.service_id)
+            });
+        });
+
+        const result = Array.from(couriersMap.values());
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error("Error saat mengambil daftar kurir:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+};
+
+
+// ============================================================
+// === FUNGSI BARU UNTUK JASA PENGIRIMAN PIHAK KETIGA (UPDATE) ===
+// ============================================================
+exports.updateSelectedCouriers = async (req, res) => {
+    const userId = req.user.id;
+    // Frontend akan mengirim array berisi ID dari layanan yang dicentang
+    const { selected_service_ids } = req.body; // Contoh: [1, 2, 5, 13, 14]
+
+    // Validasi sederhana
+    if (!Array.isArray(selected_service_ids)) {
+        return res.status(400).json({ message: "Input harus berupa array." });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+        // 1. Dapatkan store_id
+        const [stores] = await connection.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        if (stores.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ message: "Toko tidak ditemukan." });
+        }
+        const storeId = stores[0].id;
+
+        // 2. Hapus semua pilihan kurir yang lama untuk toko ini.
+        // Ini adalah cara paling aman dan sederhana untuk sinkronisasi.
+        await connection.execute('DELETE FROM store_selected_services WHERE store_id = ?', [storeId]);
+
+        // 3. Jika ada layanan baru yang dipilih, masukkan semuanya sekaligus (bulk insert)
+        if (selected_service_ids.length > 0) {
+            const values = selected_service_ids.map(serviceId => [storeId, serviceId]);
+            await connection.query(
+                'INSERT INTO store_selected_services (store_id, service_id) VALUES ?',
+                [values]
+            );
+        }
+
+        // 4. Commit transaksi jika semua berhasil
+        await connection.commit();
+        res.status(200).json({ message: "Pilihan jasa pengiriman berhasil diperbarui." });
+
+    } catch (error) {
+        await connection.rollback();
+        // Cek jika error karena service_id tidak valid
+        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+            return res.status(400).json({ message: "Satu atau lebih ID layanan tidak valid." });
+        }
+        console.error("Error saat update pilihan kurir:", error);
+        res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    } finally {
+        connection.release();
+    }
+};
