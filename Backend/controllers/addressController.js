@@ -49,7 +49,9 @@ exports.createAddress = async (req, res) => {
         });
     }
 
-    const { user_id, is_primary, ...addressData } = value;
+    const user_id = req.user.id
+
+    const {is_primary, ...addressData } = value;
     const connection = await pool.getConnection(); // Dapatkan koneksi dari pool
 
     try {
@@ -113,7 +115,7 @@ exports.createAddress = async (req, res) => {
 
 exports.getUserAddresses = async (req, res) => {
     // 1. Ambil user ID dari parameter URL
-    const { userId } = req.params;
+    const { userId } = req.user.id;
 
     if (!userId) {
         return res.status(400).json({ status: 'fail', message: 'User ID diperlukan.' });
@@ -143,7 +145,7 @@ exports.getUserAddresses = async (req, res) => {
 
 // --- FUNGSI BARU DIMULAI DI SINI ---
 exports.updateAddress = async (req, res) => {
-    const { addressId } = req.params;
+    const { addressId } = req.user.id;
     
     // 1. Validasi Input
     const { error, value } = updateAddressSchema.validate(req.body);
@@ -207,7 +209,7 @@ exports.updateAddress = async (req, res) => {
 
 // --- FUNGSI DELETE VERSI FINAL ---
 exports.deleteAddress = async (req, res) => {
-    const { addressId } = req.params;
+    const { addressId } = req.user.id;
     const connection = await db.getConnection();
 
     try {
