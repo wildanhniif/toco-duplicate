@@ -62,4 +62,24 @@ router.put(
     storeSettingsController.updateStoreCourierSettings
 );
 
+// =====================================================
+// === ROUTE BARU UNTUK JASA PENGIRIMAN PIHAK KETIGA ===
+// =====================================================
+
+// Path akan menjadi: GET /stores/me/logistics
+// (Mengambil daftar semua kurir dan status centangnya)
+router.get(
+    '/logistics',
+    protect,
+    storeSettingsController.getAvailableCouriers
+);
+
+// Path akan menjadi: PUT /stores/me/logistics
+// (Menyimpan perubahan centang)
+router.put(
+    '/logistics',
+    protect,
+    storeSettingsController.updateSelectedCouriers
+);
+
 module.exports = router;
