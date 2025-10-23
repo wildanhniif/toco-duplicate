@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
-const userRoutes = require('./routes/userRoutes');
 require('dotenv').config();
 require('./config/passport');
 
 
-// Impor kedua file router
+// Impor kedua file 
+const userRoutes = require('./routes/userRoutes');
 const authRegisterRoutes = require('./routes/authRegister');
 const authLoginRoutes = require('./routes/authLogin');
 const authGoogle = require('./routes/authGoogle');
