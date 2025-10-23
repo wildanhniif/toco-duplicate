@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const addressController = require('../controllers/addressController');
+const { protect } = require('../middleware/authMiddleware');
 
-router.post('/', addressController.createAddress);
-router.get('/user/:userId', addressController.getUserAddresses);
-router.put('/:addressId', addressController.updateAddress);
-router.delete('/:addressId', addressController.deleteAddress);
+router.post('/', protect, addressController.createAddress);
+router.get('/user/:userId', protect, addressController.getUserAddresses);
+router.put('/:addressId', protect, addressController.updateAddress);
+router.delete('/:addressId', protect, addressController.deleteAddress);
 
 
 module.exports = router;
