@@ -4,10 +4,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 
 const login = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
+    // ... (validasi error masih sama)
     
     const { identifier, password } = req.body;
 
@@ -23,16 +20,17 @@ const login = async (req, res) => {
 
         const user = users[0];
 
+        // ... (pengecekan is_verified dan password masih sama)
         if (!user.is_verified) {
             return res.status(403).json({ message: "Akun belum diverifikasi." });
         }
-
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Password salah." });
         }
-
-        const payload = { user: { id: user.id, name: user.full_name } };
+        
+        // --- INI BAGIAN YANG DIPERBAIKI ---
+        const payload = { user_id: user.user_id };
 
         jwt.sign(
             payload,

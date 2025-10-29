@@ -7,7 +7,7 @@ const pool = require('../config/database');
 const getUserProfile = async (req, res) => {
     try {
         // ID pengguna diambil dari token yang sudah diverifikasi oleh middleware
-        const userId = req.user.id;
+        const userId = req.user.user_id;
 
         // Ambil data terbaru dari database (tanpa password)
         const [users] = await pool.query(

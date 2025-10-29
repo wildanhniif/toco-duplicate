@@ -6,7 +6,7 @@ const slugify = require('../utils/slugify');
 
 exports.registerSeller = async (req, res) => {
     // 1. Dapatkan user ID dari middleware otentikasi (setelah verifikasi JWT)
-    const userId = req.user.id;
+    const userId = req.user.user_id;
 
     // Mulai transaksi database
     const connection = await db.getConnection();
@@ -14,7 +14,7 @@ exports.registerSeller = async (req, res) => {
 
     try {
         // 2. Cek apakah user sudah menjadi seller
-        const [users] = await connection.execute('SELECT role FROM users WHERE id = ?', [userId]);
+        const [users] = await connection.execute('SELECT role FROM users WHERE user_id = ?', [userId]);
         
         if (users.length === 0) {
             await connection.rollback();
@@ -27,7 +27,7 @@ exports.registerSeller = async (req, res) => {
         }
 
         // 3. Update role user menjadi 'seller'
-        await connection.execute('UPDATE users SET role = ? WHERE id = ?', ['seller', userId]);
+        await connection.execute('UPDATE users SET role = ? WHERE user_id = ?', ['seller', userId]);
 
         // 4. Buat entri toko baru yang default/kosong
         // Kita buat slug unik sementara, user akan mengisinya nanti
@@ -65,7 +65,7 @@ exports.registerSeller = async (req, res) => {
 // (Fungsi updateStoreDetails yang sudah kita modifikasi di langkah sebelumnya)
 exports.updateStoreDetails = async (req, res) => {
     // 1. Dapatkan user ID dari token JWT
-    const userId = req.user.id;
+    const userId = req.user.user_id;
 
     // 2. Ambil semua data teks dari form body
     const {

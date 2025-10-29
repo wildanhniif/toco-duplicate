@@ -5,18 +5,18 @@ const db = require('../config/database.js');
 // Helper function untuk mendapatkan store_id dari user_id
 const getStoreIdFromUserId = async (userId) => {
     // BENAR: db.execute() langsung dipanggil dengan parameter
-    const [rows] = await db.execute("SELECT id FROM stores WHERE user_id = ?", [userId]);
+    const [rows] = await db.execute("SELECT store_id FROM stores WHERE user_id = ?", [userId]);
     if (rows.length === 0) {
         throw new Error("Toko untuk user ini tidak ditemukan.");
     }
-    return rows[0].id;
+    return rows[0].store_id;
 };
 
 
 // MENGAMBIL SEMUA TEMPLATE
 exports.getTemplates = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const storeId = await getStoreIdFromUserId(userId);
 
         const sql = "SELECT * FROM reply_templates WHERE store_id = ? ORDER BY display_order ASC";
@@ -32,7 +32,7 @@ exports.getTemplates = async (req, res) => {
 // MEMBUAT TEMPLATE BARU
 exports.createTemplate = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const storeId = await getStoreIdFromUserId(userId);
         const { content } = req.body;
 
@@ -53,15 +53,15 @@ exports.createTemplate = async (req, res) => {
 
 // MENGUBAH ISI TEMPLATE
 exports.updateTemplate = async (req, res) => {
-    const { templateId } = req.params;
+    const { reply_Id } = req.params;
     const { content } = req.body;
     
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const storeId = await getStoreIdFromUserId(userId);
 
-        const sql = "UPDATE reply_templates SET content = ? WHERE id = ? AND store_id = ?";
-        const [result] = await db.execute(sql, [content, templateId, storeId]);
+        const sql = "UPDATE reply_templates SET content = ? WHERE reply_id = ? AND store_id = ?";
+        const [result] = await db.execute(sql, [content, reply_Id, storeId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Template tidak ditemukan atau Anda tidak punya izin." });
@@ -75,14 +75,14 @@ exports.updateTemplate = async (req, res) => {
 
 // MENGHAPUS TEMPLATE
 exports.deleteTemplate = async (req, res) => {
-    const { templateId } = req.params;
+    const { reply_Id } = req.params;
     
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const storeId = await getStoreIdFromUserId(userId);
         
-        const sql = "DELETE FROM reply_templates WHERE id = ? AND store_id = ?";
-        const [result] = await db.execute(sql, [templateId, storeId]);
+        const sql = "DELETE FROM reply_templates WHERE reply_id = ? AND store_id = ?";
+        const [result] = await db.execute(sql, [reply_Id, storeId]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Template tidak ditemukan atau Anda tidak punya izin." });
@@ -105,7 +105,7 @@ exports.updateTemplatesOrder = async (req, res) => {
 
     let connection; // Definisikan di luar try-catch agar bisa diakses di finally
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const storeId = await getStoreIdFromUserId(userId);
 
         // BENAR: Mendapatkan koneksi dari pool
@@ -113,9 +113,9 @@ exports.updateTemplatesOrder = async (req, res) => {
         await connection.beginTransaction();
 
         try {
-            const templateIds = templates.map(t => t.id);
+            const templateIds = templates.map(t => t.reply_id);
             const [ownedTemplates] = await connection.execute(
-                `SELECT id FROM reply_templates WHERE id IN (?) AND store_id = ?`,
+                `SELECT reply_id FROM reply_templates WHERE reply_id IN (?) AND store_id = ?`,
                 [templateIds, storeId]
             );
 
@@ -125,7 +125,7 @@ exports.updateTemplatesOrder = async (req, res) => {
             }
 
             const queries = templates.map(t => 
-                connection.execute("UPDATE reply_templates SET display_order = ? WHERE id = ?", [t.order, t.id])
+                connection.execute("UPDATE reply_templates SET display_order = ? WHERE reply_id = ?", [t.order, t.reply_id])
             );
             
             // BENAR: Menggunakan Promise.all untuk menjalankan semua query secara paralel

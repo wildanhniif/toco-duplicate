@@ -4,7 +4,7 @@ const db = require('../config/database');
 // Fungsi ini dipindahkan dari sellerController.js
 exports.getStoreSettings = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
 
         // Query untuk mengambil data dari tabel 'stores' dan 'store_about_pages' sekaligus
         const sql = `
@@ -13,7 +13,7 @@ exports.getStoreSettings = async (req, res) => {
                 s.is_on_holiday, s.holiday_start_date, s.holiday_end_date, s.show_phone_number,
                 ap.title AS about_title, ap.thumbnail_url AS about_thumbnail_url, ap.content AS about_content
             FROM stores s
-            LEFT JOIN store_about_pages ap ON s.id = ap.store_id
+            LEFT JOIN store_about_pages ap ON s.store_id = ap.store_id
             WHERE s.user_id = ?
         `;
 
@@ -34,15 +34,15 @@ exports.getStoreSettings = async (req, res) => {
 // Fungsi ini dipindahkan dari sellerController.js
 exports.updateStoreSettings = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const { is_on_holiday, holiday_start_date, holiday_end_date, show_phone_number } = req.body;
 
         // Ambil store_id berdasarkan user_id
-        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        const [stores] = await db.execute('SELECT store_id FROM stores WHERE user_id = ?', [userId]);
         if (stores.length === 0) {
             return res.status(404).json({ message: "Toko tidak ditemukan." });
         }
-        const storeId = stores[0].id;
+        const storeId = stores[0].store_id;
         
         // Validasi sederhana: jika is_on_holiday=true, tanggal harus ada
         if (is_on_holiday && (!holiday_start_date || !holiday_end_date)) {
@@ -55,7 +55,7 @@ exports.updateStoreSettings = async (req, res) => {
                 holiday_start_date = ?, 
                 holiday_end_date = ?, 
                 show_phone_number = ?
-            WHERE id = ?
+            WHERE store_id = ?
         `;
         
         // Jika mode libur tidak aktif, paksa tanggal menjadi NULL
@@ -81,7 +81,7 @@ exports.updateStoreSettings = async (req, res) => {
 // Fungsi ini dipindahkan dari sellerController.js
 exports.createOrUpdateAboutPage = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
         const { title, content } = req.body;
 
         // 1. Validasi Input
@@ -90,14 +90,14 @@ exports.createOrUpdateAboutPage = async (req, res) => {
         }
         
         // 2. Dapatkan ID Toko
-        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        const [stores] = await db.execute('SELECT store_id FROM stores WHERE user_id = ?', [userId]);
         if (stores.length === 0) {
             return res.status(404).json({ message: "Toko tidak ditemukan." });
         }
-        const storeId = stores[0].id;
+        const storeId = stores[0].store_id;
 
         // 3. Cek apakah halaman "Tentang" sudah ada
-        const [aboutPages] = await db.execute('SELECT id, thumbnail_url FROM store_about_pages WHERE store_id = ?', [storeId]);
+        const [aboutPages] = await db.execute('SELECT about_id, thumbnail_url FROM store_about_pages WHERE store_id = ?', [storeId]);
         const aboutPageExists = aboutPages.length > 0;
 
         // 4. Tentukan URL thumbnail
@@ -139,18 +139,18 @@ exports.createOrUpdateAboutPage = async (req, res) => {
 // ===========================================
 exports.getStoreCourierSettings = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
 
         // 1. Dapatkan store_id
-        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        const [stores] = await db.execute('SELECT store_id FROM stores WHERE user_id = ?', [userId]);
         if (stores.length === 0) {
             return res.status(404).json({ message: "Toko tidak ditemukan." });
         }
-        const storeId = stores[0].id;
+        const storeId = stores[0].store_id;
 
         // 2. Dapatkan pengaturan utama kurir toko
         const [settings] = await db.execute(
-            'SELECT id, is_active, max_delivery_km FROM store_courier_settings WHERE store_id = ?',
+            'SELECT setting_id, is_active, max_delivery_km FROM store_courier_settings WHERE store_id = ?',
             [storeId]
         );
 
@@ -164,7 +164,7 @@ exports.getStoreCourierSettings = async (req, res) => {
             });
         }
 
-        const settingId = settings[0].id;
+        const settingId = settings[0].setting_id;
 
         // 3. Dapatkan data ongkir berdasarkan jarak
         const [distanceRates] = await db.execute(
@@ -197,7 +197,7 @@ exports.getStoreCourierSettings = async (req, res) => {
 // === FUNGSI BARU UNTUK KURIR TOKO (UPDATE) ===
 // =============================================
 exports.updateStoreCourierSettings = async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     const { 
         is_active,          // boolean: (Aktifkan kurir toko)
         max_delivery_km,    // number: (Batas pengiriman ...km)
@@ -211,12 +211,12 @@ exports.updateStoreCourierSettings = async (req, res) => {
 
     try {
         // 1. Dapatkan store_id
-        const [stores] = await connection.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        const [stores] = await connection.execute('SELECT store_id FROM stores WHERE user_id = ?', [userId]);
         if (stores.length === 0) {
             await connection.rollback();
             return res.status(404).json({ message: "Toko tidak ditemukan." });
         }
-        const storeId = stores[0].id;
+        const storeId = stores[0].store_id;
 
         // 2. Validasi Input
         if (is_active && (!max_delivery_km || max_delivery_km <= 0)) {
@@ -239,8 +239,8 @@ exports.updateStoreCourierSettings = async (req, res) => {
         
         // Dapatkan ID dari pengaturan yang baru saja di-insert atau di-update
         const settingId = upsertResult.insertId > 0 ? upsertResult.insertId : (await connection.execute(
-            'SELECT id FROM store_courier_settings WHERE store_id = ?', [storeId]
-        ))[0][0].id;
+            'SELECT setting_id FROM store_courier_settings WHERE store_id = ?', [storeId]
+        ))[0][0].setting_id;
 
         // --- TRANSAKSI PENGATURAN JARAK ---
         // 4. Hapus semua data ongkir jarak yang lama (agar bersih)
@@ -288,19 +288,19 @@ exports.updateStoreCourierSettings = async (req, res) => {
 // ==========================================================
 exports.getAvailableCouriers = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.user_id;
 
         // 1. Dapatkan store_id (opsional, jika toko belum ada, tetap tampilkan list)
-        const [stores] = await db.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
-        const storeId = stores.length > 0 ? stores[0].id : null;
+        const [stores] = await db.execute('SELECT store_id FROM stores WHERE user_id = ?', [userId]);
+        const storeId = stores.length > 0 ? stores[0].store_id : null;
 
         // 2. Ambil semua data kurir dan layanannya dalam satu query
         const sql = `
             SELECT 
-                c.id as courier_id, c.code as courier_code, c.name as courier_name,
-                cs.id as service_id, cs.code as service_code, cs.name as service_name
+                c.courier_id as courier_id, c.code as courier_code, c.name as courier_name,
+                cs.service_id as service_id, cs.code as service_code, cs.name as service_name
             FROM couriers c
-            JOIN courier_services cs ON c.id = cs.courier_id
+            JOIN courier_services cs ON c.courier_id = cs.courier_id
             WHERE c.is_active = 1 AND cs.is_active = 1
             ORDER BY c.name ASC, cs.name ASC
         `;
@@ -322,7 +322,7 @@ exports.getAvailableCouriers = async (req, res) => {
             // Jika kurir belum ada di map, tambahkan
             if (!couriersMap.has(service.courier_id)) {
                 couriersMap.set(service.courier_id, {
-                    id: service.courier_id,
+                    courier_id: service.courier_id,
                     code: service.courier_code,
                     name: service.courier_name,
                     services: []
@@ -331,7 +331,7 @@ exports.getAvailableCouriers = async (req, res) => {
 
             // Tambahkan layanan ke kurir yang sesuai
             couriersMap.get(service.courier_id).services.push({
-                id: service.service_id,
+                service_id: service.service_id,
                 code: service.service_code,
                 name: service.service_name,
                 // Cek apakah ID layanan ini ada di Set layanan yang sudah dipilih
@@ -353,7 +353,7 @@ exports.getAvailableCouriers = async (req, res) => {
 // === FUNGSI BARU UNTUK JASA PENGIRIMAN PIHAK KETIGA (UPDATE) ===
 // ============================================================
 exports.updateSelectedCouriers = async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     // Frontend akan mengirim array berisi ID dari layanan yang dicentang
     const { selected_service_ids } = req.body; // Contoh: [1, 2, 5, 13, 14]
 
@@ -367,12 +367,12 @@ exports.updateSelectedCouriers = async (req, res) => {
 
     try {
         // 1. Dapatkan store_id
-        const [stores] = await connection.execute('SELECT id FROM stores WHERE user_id = ?', [userId]);
+        const [stores] = await connection.execute('SELECT store_id FROM stores WHERE user_id = ?', [userId]);
         if (stores.length === 0) {
             await connection.rollback();
             return res.status(404).json({ message: "Toko tidak ditemukan." });
         }
-        const storeId = stores[0].id;
+        const storeId = stores[0].store_id;
 
         // 2. Hapus semua pilihan kurir yang lama untuk toko ini.
         // Ini adalah cara paling aman dan sederhana untuk sinkronisasi.

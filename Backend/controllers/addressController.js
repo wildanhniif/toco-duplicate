@@ -5,7 +5,6 @@ const Joi = require('joi');
 
 // Skema validasi menggunakan Joi
 const addressSchema = Joi.object({
-    user_id: Joi.number().integer().required(),
     label: Joi.string().min(3).max(50).required(),
     recipient_name: Joi.string().min(3).max(100).required(),
     phone_number: Joi.string().min(10).max(20).required(),
@@ -49,7 +48,7 @@ exports.createAddress = async (req, res) => {
         });
     }
 
-    const user_id = req.user.id
+    const user_id = req.user.user_id
 
     const {is_primary, ...addressData } = value;
     const connection = await pool.getConnection(); // Dapatkan koneksi dari pool
@@ -115,7 +114,7 @@ exports.createAddress = async (req, res) => {
 
 exports.getUserAddresses = async (req, res) => {
     // 1. Ambil user ID dari parameter URL
-    const { userId } = req.user.id;
+    const { userId } = req.user.user_id;
 
     if (!userId) {
         return res.status(400).json({ status: 'fail', message: 'User ID diperlukan.' });
@@ -145,7 +144,7 @@ exports.getUserAddresses = async (req, res) => {
 
 // --- FUNGSI BARU DIMULAI DI SINI ---
 exports.updateAddress = async (req, res) => {
-    const { addressId } = req.user.id;
+    const { addressId } = req.user.user_id;
     
     // 1. Validasi Input
     const { error, value } = updateAddressSchema.validate(req.body);
@@ -159,7 +158,7 @@ exports.updateAddress = async (req, res) => {
         await connection.beginTransaction();
 
         // 2. Dapatkan user_id dari alamat yang akan di-update
-        const [rows] = await connection.execute('SELECT user_id FROM user_addresses WHERE id = ?', [addressId]);
+        const [rows] = await connection.execute('SELECT user_id FROM user_addresses WHERE userAddress_id = ?', [addressId]);
         if (rows.length === 0) {
             await connection.rollback();
             connection.release();
@@ -170,7 +169,7 @@ exports.updateAddress = async (req, res) => {
         // 3. LOGIKA ALAMAT UTAMA (Sama seperti fungsi Create)
         // Jika user menjadikan alamat ini utama, maka nonaktifkan status utama alamat lain.
         if (value.is_primary === true) {
-            const updatePrimarySql = 'UPDATE user_addresses SET is_primary = false WHERE user_id = ? AND id != ?';
+            const updatePrimarySql = 'UPDATE user_addresses SET is_primary = false WHERE user_id = ? AND userAddress_id != ?';
             await connection.execute(updatePrimarySql, [userId, addressId]);
         }
 
@@ -180,7 +179,7 @@ exports.updateAddress = async (req, res) => {
         const queryValues = fieldsToUpdate.map(field => value[field]);
         queryValues.push(addressId); // Tambahkan addressId untuk klausa WHERE
 
-        const updateSql = `UPDATE user_addresses SET ${setClauses} WHERE id = ?`;
+        const updateSql = `UPDATE user_addresses SET ${setClauses} WHERE userAddress_id = ?`;
         
         const [result] = await connection.execute(updateSql, queryValues);
 
@@ -209,7 +208,7 @@ exports.updateAddress = async (req, res) => {
 
 // --- FUNGSI DELETE VERSI FINAL ---
 exports.deleteAddress = async (req, res) => {
-    const { addressId } = req.user.id;
+    const { addressId } = req.user.user_id;
     const connection = await db.getConnection();
 
     try {
@@ -217,7 +216,7 @@ exports.deleteAddress = async (req, res) => {
 
         // 1. Dapatkan user_id dari alamat yang akan dihapus
         const [addressInfoRows] = await connection.execute(
-            'SELECT user_id, is_primary FROM user_addresses WHERE id = ?',
+            'SELECT user_id, is_primary FROM user_addresses WHERE userAddress_id = ?',
             [addressId]
         );
 
@@ -248,13 +247,13 @@ exports.deleteAddress = async (req, res) => {
         }
 
         // 3. Jika lebih dari satu, lanjutkan proses penghapusan
-        await connection.execute('DELETE FROM user_addresses WHERE id = ?', [addressId]);
+        await connection.execute('DELETE FROM user_addresses WHERE userAddress_id = ?', [addressId]);
 
         // 4. LOGIKA PENGGANTI PRIMARY: Jika yang dihapus adalah alamat utama
         if (wasPrimary) {
             // Cari alamat lain (yang paling baru dibuat) untuk dijadikan primary baru.
             const [newPrimaryCandidate] = await connection.execute(
-                'SELECT id FROM user_addresses WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+                'SELECT userAddress_id FROM user_addresses WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
                 [userId]
             );
 
@@ -262,7 +261,7 @@ exports.deleteAddress = async (req, res) => {
             if (newPrimaryCandidate.length > 0) {
                 const newPrimaryId = newPrimaryCandidate[0].id;
                 await connection.execute(
-                    'UPDATE user_addresses SET is_primary = true WHERE id = ?',
+                    'UPDATE user_addresses SET is_primary = true WHERE userAddress_id = ?',
                     [newPrimaryId]
                 );
             }

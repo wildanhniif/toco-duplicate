@@ -25,7 +25,7 @@ const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         const sqlQuery = `
-            INSERT INTO users 
+            INSERT INTO users
                 (full_name, phone_number, email, password, gender, birth_date) 
             VALUES (?, ?, ?, ?, ?, ?)
         `;
@@ -36,7 +36,7 @@ const register = async (req, res) => {
 
         // Buat token verifikasi menggunakan JWT
         const verificationToken = jwt.sign(
-            { id: userId },
+            { user_id: userId },
             process.env.JWT_SECRET,
             { expiresIn: '1h' } // Token berlaku 1 jam
         );
@@ -65,11 +65,11 @@ const verifyEmail = async (req, res) => {
     try {
         // Verifikasi token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id;
+        const userId = decoded.user_id;
 
         // Update status verifikasi user di database
         await pool.query(
-            "UPDATE users SET is_verified = 1 WHERE id = ?",
+            "UPDATE users SET is_verified = 1 WHERE user_id = ?",
             [userId]
         );
 

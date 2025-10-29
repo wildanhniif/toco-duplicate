@@ -29,7 +29,7 @@ exports.createCategory = async (req, res) => {
         
         res.status(201).json({
             message: 'Kategori berhasil dibuat',
-            id: result.insertId,
+            category_id: result.insertId,
             ...newCategory
         });
     } catch (error) {
@@ -46,7 +46,7 @@ exports.createCategory = async (req, res) => {
 // @desc    Mendapatkan satu kategori berdasarkan ID (NEW)
 exports.getCategoryById = async (req, res) => {
     const { id } = req.params;
-    const sql = 'SELECT id, name, slug, parent_id FROM categories WHERE id = ?';
+    const sql = 'SELECT category_id, name, slug, parent_id FROM categories WHERE category_id = ?';
 
     let connection;
     try {
@@ -68,7 +68,7 @@ exports.getCategoryById = async (req, res) => {
 
 // @desc    Mendapatkan semua kategori (FIXED)
 exports.getAllCategories = async (req, res) => {
-    const sql = 'SELECT id, name, slug, parent_id FROM categories ORDER BY name ASC';
+    const sql = 'SELECT category_id, name, slug, parent_id FROM categories ORDER BY name ASC';
     
     let connection;
     try {
@@ -93,7 +93,7 @@ exports.updateCategory = async (req, res) => {
     }
 
     const slug = generateSlug(name);
-    const sql = 'UPDATE categories SET name = ?, slug = ?, parent_id = ? WHERE id = ?';
+    const sql = 'UPDATE categories SET name = ?, slug = ?, parent_id = ? WHERE category_id = ?';
     
     let connection;
     try {
@@ -113,13 +113,13 @@ exports.updateCategory = async (req, res) => {
         res.status(500).json({ message: 'Terjadi kesalahan pada server' });
     } finally {
         if (connection) connection.release();
-    }
+    } 
 };
 
 // @desc    Menghapus kategori (NEW)
 exports.deleteCategory = async (req, res) => {
     const { id } = req.params;
-    const sql = 'DELETE FROM categories WHERE id = ?';
+    const sql = 'DELETE FROM categories WHERE category_id = ?';
 
     let connection;
     try {
@@ -141,7 +141,7 @@ exports.deleteCategory = async (req, res) => {
 
 // @desc    Mendapatkan semua kategori dalam format pohon (NEW)
 exports.getCategoryTree = async (req, res) => {
-    const sql = 'SELECT id, name, slug, parent_id FROM categories ORDER BY name ASC';
+    const sql = 'SELECT category_id, name, slug, parent_id FROM categories ORDER BY name ASC';
     let connection;
 
     try {
@@ -159,7 +159,7 @@ exports.getCategoryTree = async (req, res) => {
         const categoryMap = {};
         flatCategories.forEach(category => {
             category.children = []; // Tambahkan properti 'children'
-            categoryMap[category.id] = category;
+            categoryMap[category.category_id] = category;
         });
 
         // 2. Buat array untuk menampung kategori level atas (root)

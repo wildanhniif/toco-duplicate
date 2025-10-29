@@ -20,7 +20,7 @@ const protect = (req, res, next) => {
 
             // 4. Tambahkan payload (data user) dari token ke objek `req`
             // Ini akan membuat data user tersedia di semua rute yang diproteksi
-            req.user = decoded.user;
+            req.user = decoded;
 
             // 5. Lanjutkan ke controller berikutnya
             next();
