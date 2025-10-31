@@ -14,6 +14,10 @@ const addressRoutes = require('./routes/addressRoutes');
 const wilayahRoutes = require('./routes/wilayahRoutes');
 const sellerRoutes = require('./routes/sellerRoutes');
 const categoryRoutes = require('./routes/categories');
+const productRoutes = require('./routes/productRoutes');
+const optionsRoutes = require('./routes/optionsRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const checkoutRoutes = require('./routes/checkoutRoutes');
 
 const app = express();
 
@@ -28,6 +32,12 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/wilayah', wilayahRoutes);
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/options', optionsRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/checkout', checkoutRoutes);
+// Serve static uploads (product/store images)
+app.use('/uploads', express.static('uploads'));
 
 // Jalankan Server
 const PORT = process.env.PORT || 5000;
