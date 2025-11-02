@@ -8,12 +8,19 @@ const fs = require("fs");
 
 // Impor fungsi controller yang sudah kita buat
 const {
-    createProduct,
-    getAllProducts,
-    getProductById,
-    updateProduct,
+  createProduct,
+  getAllProducts,
+  getProductById,
+  getMyProducts,
+  updateProduct,
+  quickUpdateProduct,
   deleteProduct,
+  duplicateProduct,
   setProductStatus,
+  bulkToggleStatus,
+  bulkDeleteProducts,
+  promoteProduct,
+  cancelPromoteProduct,
   addProductImages,
 } = require("../controllers/productController");
 
@@ -41,6 +48,13 @@ const productImageStorage = multer.diskStorage({
 const uploadProductImages = multer({ storage: productImageStorage });
 
 // Gunakan rute varian sebagai "sub-route"
+
+// Daftar produk seller (dashboard)
+router.get("/my", protect, getMyProducts);
+
+// Bulk actions (harus sebelum route /:id agar tidak bentrok)
+router.patch("/bulk/status", protect, bulkToggleStatus);
+router.delete("/bulk", protect, bulkDeleteProducts);
 
 // Metadata form dinamis untuk kategori -> agar frontend tau field yang wajib
 router.get("/meta/form", async (req, res) => {
@@ -141,22 +155,32 @@ router.get("/meta/form", async (req, res) => {
 // Rute untuk mengambil semua produk (public) dan membuat produk baru (private)
 router.route("/").get(getAllProducts).post(protect, createProduct);
 
-// Rute untuk mengambil, mengupdate, dan menghapus satu produk berdasarkan ID (atau slug)
-router
-  .route("/:id")
-    .get(getProductById)
-    .put(protect, updateProduct)
-    .delete(protect, deleteProduct);
+// Iklankan produk (harus SEBELUM route /:id)
+router.post("/:id/promote", protect, promoteProduct);
+router.delete("/:id/promote", protect, cancelPromoteProduct);
 
-// Update status produk
+// Duplikat produk (harus SEBELUM route /:id)
+router.post("/:id/duplicate", protect, duplicateProduct);
+
+// Update cepat harga/stock per produk (harus SEBELUM route /:id)
+router.patch("/:id/quick-update", protect, quickUpdateProduct);
+
+// Update status produk (harus SEBELUM route /:id)
 router.put("/:id/status", protect, setProductStatus);
 
-// Upload images produk (field: images[])
+// Upload images produk (harus SEBELUM route /:id)
 router.post(
   "/:id/images",
   protect,
   uploadProductImages.array("images", 10),
   addProductImages
 );
+
+// Rute untuk mengambil, mengupdate, dan menghapus satu produk berdasarkan ID (atau slug)
+router
+  .route("/:id")
+  .get(getProductById)
+  .put(protect, updateProduct)
+  .delete(protect, deleteProduct);
 
 module.exports = router;
