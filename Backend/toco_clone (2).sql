@@ -974,6 +974,167 @@ ALTER TABLE `voucher_usages`
 ALTER TABLE `cart_vouchers`
   ADD COLUMN `voucher_id` bigint(20) UNSIGNED DEFAULT NULL,
   ADD CONSTRAINT `fk_cv_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE SET NULL;
+
+-- --------------------------------------------------------
+-- PRODUCT PROMOTIONS (Iklankan Produk)
+CREATE TABLE IF NOT EXISTS `product_promotions` (
+  `promotion_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `store_id` int(10) UNSIGNED NOT NULL,
+  `started_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`promotion_id`),
+  KEY `idx_pp_product` (`product_id`),
+  KEY `idx_pp_store` (`store_id`),
+  KEY `idx_pp_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `product_promotions`
+  MODIFY `promotion_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `product_promotions`
+  ADD CONSTRAINT `fk_pp_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pp_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE;
+
+-- --------------------------------------------------------
+-- PRODUCT VARIANTS & SKUS (Sistem varian baru - IMPORTANT!)
+CREATE TABLE IF NOT EXISTS `product_variant_attributes` (
+  `attribute_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `attribute_name` varchar(100) NOT NULL,
+  `sort_order` smallint(5) UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `product_variant_attributes`
+  ADD PRIMARY KEY (`attribute_id`),
+  ADD KEY `idx_pva_product` (`product_id`);
+ALTER TABLE `product_variant_attributes`
+  MODIFY `attribute_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+CREATE TABLE IF NOT EXISTS `product_variant_attribute_options` (
+  `option_id` bigint(20) UNSIGNED NOT NULL,
+  `attribute_id` bigint(20) UNSIGNED NOT NULL,
+  `option_value` varchar(100) NOT NULL,
+  `sort_order` smallint(5) UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `product_variant_attribute_options`
+  ADD PRIMARY KEY (`option_id`),
+  ADD KEY `idx_pvao_attribute` (`attribute_id`);
+ALTER TABLE `product_variant_attribute_options`
+  MODIFY `option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+CREATE TABLE IF NOT EXISTS `product_skus` (
+  `product_sku_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `sku_code` varchar(120) NOT NULL,
+  `price` decimal(15,2) NOT NULL,
+  `stock` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `weight_gram` int(10) UNSIGNED DEFAULT NULL,
+  `dimensions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`dimensions`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  UNIQUE KEY `uniq_sku_per_product` (`product_id`,`sku_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `product_skus`
+  ADD PRIMARY KEY (`product_sku_id`),
+  ADD KEY `idx_ps_product` (`product_id`);
+ALTER TABLE `product_skus`
+  MODIFY `product_sku_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+CREATE TABLE IF NOT EXISTS `product_sku_options` (
+  `product_sku_option_id` bigint(20) UNSIGNED NOT NULL,
+  `product_sku_id` bigint(20) UNSIGNED NOT NULL,
+  `option_id` bigint(20) UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `product_sku_options`
+  ADD PRIMARY KEY (`product_sku_option_id`),
+  ADD KEY `idx_pso_sku` (`product_sku_id`),
+  ADD KEY `idx_pso_option` (`option_id`);
+ALTER TABLE `product_sku_options`
+  MODIFY `product_sku_option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+-- --------------------------------------------------------
+-- CLASSIFIED SPECS (Motor, Mobil, Property)
+CREATE TABLE IF NOT EXISTS `vehicle_motor_specs` (
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `brand` varchar(100) NOT NULL,
+  `year` smallint(4) NOT NULL,
+  `model` varchar(100) NOT NULL,
+  `transmission` enum('manual','automatic') NOT NULL,
+  `mileage_km` int(11) DEFAULT NULL,
+  `engine_cc` int(11) DEFAULT NULL,
+  `color` varchar(50) DEFAULT NULL,
+  `fuel` varchar(50) DEFAULT NULL,
+  `tax_expiry_date` date DEFAULT NULL,
+  `completeness_text` varchar(255) DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  PRIMARY KEY (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `vehicle_mobil_specs` (
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `brand` varchar(100) NOT NULL,
+  `model` varchar(100) NOT NULL,
+  `year` smallint(4) NOT NULL,
+  `transmission` enum('manual','automatic') NOT NULL,
+  `mileage_km` int(11) DEFAULT NULL,
+  `license_plate` varchar(20) DEFAULT NULL,
+  `color` varchar(50) DEFAULT NULL,
+  `fuel` varchar(50) DEFAULT NULL,
+  `engine_cc` int(11) DEFAULT NULL,
+  `seat_count` tinyint(3) DEFAULT NULL,
+  `tax_expiry_date` date DEFAULT NULL,
+  `completeness_text` varchar(255) DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  PRIMARY KEY (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `property_specs` (
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `transaction_type` enum('sale','rent') NOT NULL,
+  `price` decimal(15,2) NOT NULL,
+  `building_area_m2` int(11) DEFAULT NULL,
+  `land_area_m2` int(11) DEFAULT NULL,
+  `bedrooms` tinyint(3) DEFAULT NULL,
+  `bathrooms` tinyint(3) DEFAULT NULL,
+  `floors` tinyint(3) DEFAULT NULL,
+  `certificate_text` varchar(255) DEFAULT NULL,
+  `facilities_text` text DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  PRIMARY KEY (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Foreign keys untuk varian & SKU
+ALTER TABLE `product_variant_attributes`
+  ADD CONSTRAINT `fk_pva_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+ALTER TABLE `product_variant_attribute_options`
+  ADD CONSTRAINT `fk_pvao_attribute` FOREIGN KEY (`attribute_id`) REFERENCES `product_variant_attributes` (`attribute_id`) ON DELETE CASCADE;
+
+ALTER TABLE `product_skus`
+  ADD CONSTRAINT `fk_ps_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+ALTER TABLE `product_sku_options`
+  ADD CONSTRAINT `fk_pso_sku` FOREIGN KEY (`product_sku_id`) REFERENCES `product_skus` (`product_sku_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pso_option` FOREIGN KEY (`option_id`) REFERENCES `product_variant_attribute_options` (`option_id`) ON DELETE CASCADE;
+
+-- Foreign keys untuk classified specs
+ALTER TABLE `vehicle_motor_specs`
+  ADD CONSTRAINT `fk_vms_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+ALTER TABLE `vehicle_mobil_specs`
+  ADD CONSTRAINT `fk_vhcs_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+ALTER TABLE `property_specs`
+  ADD CONSTRAINT `fk_property_specs_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
 --
 -- Constraints for table `store_about_pages`
 --
@@ -1012,11 +1173,11 @@ ALTER TABLE `user_addresses`
   ADD CONSTRAINT `user_addresses_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
 
 --
--- Constraints for table `variant_values`
+-- Constraints for table `variant_values` (DEPRECATED - Tidak digunakan lagi)
 --
-ALTER TABLE `variant_values`
-  ADD CONSTRAINT `variant_values_ibfk_1` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `variant_values_ibfk_2` FOREIGN KEY (`value_id`) REFERENCES `product_option_values` (`value_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+-- ALTER TABLE `variant_values`
+--   ADD CONSTRAINT `variant_values_ibfk_1` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+--   ADD CONSTRAINT `variant_values_ibfk_2` FOREIGN KEY (`value_id`) REFERENCES `product_option_values` (`value_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
