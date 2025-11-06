@@ -164,15 +164,18 @@ exports.addItem = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     const p = pRows[0];
     let unitPrice = p.price;
+    let weightGram = p.weight_gram;
     let variantSnap = null;
     if (product_sku_id) {
       const [skuRows] = await db.query(
-        "SELECT product_sku_id, price FROM product_skus WHERE product_sku_id = ? AND product_id = ?",
+        "SELECT product_sku_id, price, weight_gram FROM product_skus WHERE product_sku_id = ? AND product_id = ?",
         [product_sku_id, product_id]
       );
       if (!skuRows.length)
         return res.status(404).json({ message: "SKU not found" });
       unitPrice = skuRows[0].price;
+      // Gunakan weight dari SKU jika ada, fallback ke product weight
+      if (skuRows[0].weight_gram) weightGram = skuRows[0].weight_gram;
     }
     const [imgRows] = await db.query(
       "SELECT url FROM product_images WHERE product_id = ? ORDER BY sort_order ASC LIMIT 1",
@@ -192,7 +195,7 @@ exports.addItem = async (req, res) => {
         variantSnap,
         imageUrl,
         unitPrice,
-        p.weight_gram,
+        weightGram,
         quantity,
       ]
     );
@@ -291,22 +294,98 @@ exports.setAddress = async (req, res) => {
   }
 };
 
-// PUT /api/cart/shipping/:store_id -> set pilihan kurir/jasa dan ongkir per toko
+// PUT /api/cart/shipping/:store_id -> set pilihan kurir/jasa
+// Body yang diterima: { courier_code, service_code, origin_id, destination_id, note }
+// Backend akan menghitung ulang delivery_fee + etd berdasar data keranjang
 exports.setShipping = async (req, res) => {
   const userId = req.user.user_id;
   const { store_id } = req.params;
-  const {
-    courier_code,
-    service_code,
-    service_name,
-    etd_min_days,
-    etd_max_days,
-    delivery_fee,
-    note,
-  } = req.body;
+  const { courier_code, service_code, origin_id, destination_id, note } =
+    req.body;
+  if (!courier_code || !service_code)
+    return res
+      .status(400)
+      .json({ message: "courier_code dan service_code wajib diisi" });
+  if (!origin_id || !destination_id)
+    return res
+      .status(400)
+      .json({ message: "origin_id dan destination_id wajib diisi" });
   try {
     const cartId = await getOrCreateCartId(userId);
-    // UPSERT
+
+    // Hitung total berat (gram) item TERPILIH untuk store terkait
+    const [wRows] = await db.query(
+      `SELECT weight_gram_snapshot, quantity FROM cart_items 
+       WHERE cart_id = ? AND store_id = ? AND selected = 1`,
+      [cartId, store_id]
+    );
+    if (!wRows.length) {
+      return res
+        .status(400)
+        .json({ message: "Tidak ada item terpilih untuk store ini" });
+    }
+    let totalWeight = 0;
+    for (const r of wRows)
+      totalWeight +=
+        Number(r.weight_gram_snapshot || 0) * Number(r.quantity || 0);
+    if (totalWeight <= 0) totalWeight = 100; // fallback minimal 100gr
+
+    // Panggil komerce calculate domestik
+    const apiKey = process.env.RAJAONGKIR_API_KEY;
+    const baseUrl =
+      process.env.RAJAONGKIR_BASE_URL || "https://rajaongkir.komerce.id/api/v1";
+    if (!apiKey)
+      return res
+        .status(500)
+        .json({ message: "RAJAONGKIR_API_KEY belum diset di environment" });
+
+    const headers = {
+      key: apiKey,
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
+    const form = new URLSearchParams();
+    form.append("origin", String(origin_id));
+    form.append("destination", String(destination_id));
+    form.append("weight", String(totalWeight));
+    form.append("courier", String(courier_code));
+    form.append("price", "lowest");
+
+    const axios = require("axios");
+    const { data } = await axios.post(
+      `${baseUrl}/calculate/domestic-cost`,
+      form,
+      { headers }
+    );
+    const list = Array.isArray(data?.data) ? data.data : [];
+    // Cari service yang cocok
+    const picked = list.find(
+      (x) =>
+        String(x.code).toLowerCase() === String(courier_code).toLowerCase() &&
+        String(x.service).toUpperCase() === String(service_code).toUpperCase()
+    );
+    if (!picked) {
+      return res
+        .status(400)
+        .json({ message: "Service tidak ditemukan untuk kombinasi input" });
+    }
+    const service_name = picked.name || null;
+    const cost = Number(picked.cost || 0);
+    const etdText = String(picked.etd || "").toLowerCase();
+    // Parse "2-3 day" -> 2,3
+    let etd_min_days = null,
+      etd_max_days = null;
+    const match = etdText.match(/(\d+)\s*-\s*(\d+)/) || etdText.match(/(\d+)/);
+    if (match) {
+      if (match[2]) {
+        etd_min_days = Number(match[1]);
+        etd_max_days = Number(match[2]);
+      } else {
+        etd_min_days = Number(match[1]);
+        etd_max_days = Number(match[1]);
+      }
+    }
+
+    // UPSERT ke cart_shipping_selections
     const [rows] = await db.query(
       "SELECT selection_id FROM cart_shipping_selections WHERE cart_id = ? AND store_id = ?",
       [cartId, store_id]
@@ -317,10 +396,10 @@ exports.setShipping = async (req, res) => {
         [
           courier_code,
           service_code,
-          service_name || null,
-          etd_min_days || null,
-          etd_max_days || null,
-          delivery_fee || 0,
+          service_name,
+          etd_min_days,
+          etd_max_days,
+          cost,
           note || null,
           rows[0].selection_id,
         ]
@@ -333,15 +412,27 @@ exports.setShipping = async (req, res) => {
           store_id,
           courier_code,
           service_code,
-          service_name || null,
-          etd_min_days || null,
-          etd_max_days || null,
-          delivery_fee || 0,
+          service_name,
+          etd_min_days,
+          etd_max_days,
+          cost,
           note || null,
         ]
       );
     }
-    res.json({ message: "Shipping set" });
+
+    res.json({
+      message: "Shipping set",
+      selection: {
+        store_id: Number(store_id),
+        courier_code,
+        service_code,
+        service_name,
+        etd_min_days,
+        etd_max_days,
+        delivery_fee: cost,
+      },
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Server Error" });

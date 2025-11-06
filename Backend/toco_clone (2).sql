@@ -22,6 +22,105 @@ SET time_zone = "+00:00";
 --
 
 -- --------------------------------------------------------
+-- ORDERS (Master) - Domain transaksi
+CREATE TABLE IF NOT EXISTS `orders` (
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `order_code` varchar(30) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `store_id` int(10) UNSIGNED NOT NULL,
+  `address_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `subtotal_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `shipping_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `discount_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `total_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `voucher_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `voucher_code` varchar(50) DEFAULT NULL,
+  `status` enum('pending_unpaid','waiting_confirmation','processing','shipped','completed','cancelled') NOT NULL DEFAULT 'pending_unpaid',
+  `payment_status` enum('unpaid','paid','refunded') NOT NULL DEFAULT 'unpaid',
+  `payment_provider` varchar(50) DEFAULT NULL,
+  `payment_reference` varchar(100) DEFAULT NULL,
+  `shipping_courier_code` varchar(50) DEFAULT NULL,
+  `shipping_service_code` varchar(50) DEFAULT NULL,
+  `shipping_service_name` varchar(100) DEFAULT NULL,
+  `shipping_etd_min_days` int(11) DEFAULT NULL,
+  `shipping_etd_max_days` int(11) DEFAULT NULL,
+  `shipping_tracking_no` varchar(100) DEFAULT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`order_id`),
+  UNIQUE KEY `uniq_order_code` (`order_code`),
+  KEY `idx_orders_user` (`user_id`),
+  KEY `idx_orders_store` (`store_id`),
+  KEY `idx_orders_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `orders`
+  MODIFY `order_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+-- ORDER ITEMS
+CREATE TABLE IF NOT EXISTS `order_items` (
+  `order_item_id` bigint(20) UNSIGNED NOT NULL,
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `product_name` varchar(255) NOT NULL,
+  `sku_code` varchar(100) DEFAULT NULL,
+  `price` decimal(15,2) NOT NULL,
+  `quantity` int(11) NOT NULL,
+  `weight_gram` int(11) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`order_item_id`),
+  KEY `idx_oi_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `order_items`
+  MODIFY `order_item_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+-- ORDER SHIPPING (alamat snapshot & biaya)
+CREATE TABLE IF NOT EXISTS `order_shipping` (
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `recipient_name` varchar(255) NOT NULL,
+  `phone_number` varchar(30) NOT NULL,
+  `address_line` text NOT NULL,
+  `province` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `district` varchar(100) DEFAULT NULL,
+  `postal_code` varchar(10) DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL,
+  PRIMARY KEY (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ORDER STATUS LOGS (riwayat status)
+CREATE TABLE IF NOT EXISTS `order_status_logs` (
+  `log_id` bigint(20) UNSIGNED NOT NULL,
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `old_status` varchar(50) DEFAULT NULL,
+  `new_status` varchar(50) NOT NULL,
+  `changed_by` enum('system','user','seller','admin') NOT NULL DEFAULT 'system',
+  `note` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`log_id`),
+  KEY `idx_osl_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `order_status_logs`
+  MODIFY `log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+-- FOREIGN KEYS ORDERS
+ALTER TABLE `orders`
+  ADD CONSTRAINT `fk_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_orders_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE RESTRICT,
+  ADD CONSTRAINT `fk_orders_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE SET NULL;
+
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `fk_oi_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_oi_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE RESTRICT;
+
+ALTER TABLE `order_shipping`
+  ADD CONSTRAINT `fk_os_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
+
 
 --
 -- Table structure for table `attributes`
@@ -928,28 +1027,60 @@ ALTER TABLE `cart_shipping_selections`
   ADD CONSTRAINT `fk_css_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`cart_id`) ON DELETE CASCADE;
 
 -- --------------------------------------------------------
--- VOUCHERS (MASTER)
+-- VOUCHERS (MASTER) - Enhanced for Seller Dashboard
 CREATE TABLE IF NOT EXISTS `vouchers` (
   `voucher_id` bigint(20) UNSIGNED NOT NULL,
+  `store_id` int(10) UNSIGNED NOT NULL,
   `code` varchar(50) NOT NULL,
-  `type` enum('fixed','percent') NOT NULL,
-  `value` decimal(15,2) NOT NULL,
-  `max_discount` decimal(15,2) DEFAULT NULL,
-  `min_order_amount` decimal(15,2) DEFAULT 0.00,
-  `start_at` datetime DEFAULT NULL,
-  `end_at` datetime DEFAULT NULL,
-  `usage_limit_total` int(11) DEFAULT NULL,
-  `usage_limit_per_user` int(11) DEFAULT NULL,
+  `voucher_type` enum('discount','free_shipping') NOT NULL COMMENT 'discount: diskon, free_shipping: gratis ongkir',
+  `type` enum('fixed','percent') NOT NULL COMMENT 'fixed: potongan nominal, percent: persentase',
+  `value` decimal(15,2) NOT NULL COMMENT 'nilai persentase atau nominal potongan',
+  `max_discount` decimal(15,2) DEFAULT NULL COMMENT 'maksimum diskon untuk persentase',
+  `min_discount` decimal(15,2) DEFAULT NULL COMMENT 'minimum diskon untuk persentase',
+  `min_order_amount` decimal(15,2) DEFAULT 0.00 COMMENT 'minimum transaksi',
+  `title` varchar(255) NOT NULL COMMENT 'judul promosi',
+  `description` text DEFAULT NULL COMMENT 'deskripsi promosi',
+  `target` enum('public','private') NOT NULL DEFAULT 'public' COMMENT 'public: publik, private: khusus',
+  `applicable_to` enum('all_products','specific_products') NOT NULL DEFAULT 'all_products' COMMENT 'semua produk atau produk tertentu',
+  `start_at` datetime NOT NULL COMMENT 'periode dimulai',
+  `end_at` datetime NOT NULL COMMENT 'periode berakhir',
+  `usage_limit_total` int(11) DEFAULT NULL COMMENT 'kuota promosi',
+  `usage_limit_per_user` int(11) DEFAULT NULL COMMENT 'limit per pembeli (NULL = tanpa batas)',
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  UNIQUE KEY `uniq_voucher_code` (`code`)
+  UNIQUE KEY `uniq_voucher_code` (`code`),
+  KEY `idx_v_store` (`store_id`),
+  KEY `idx_v_start_end` (`start_at`,`end_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE `vouchers`
   ADD PRIMARY KEY (`voucher_id`);
 ALTER TABLE `vouchers`
   MODIFY `voucher_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+-- Relasi voucher dengan produk tertentu
+CREATE TABLE IF NOT EXISTS `voucher_products` (
+  `voucher_product_id` bigint(20) UNSIGNED NOT NULL,
+  `voucher_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`voucher_product_id`),
+  UNIQUE KEY `uniq_vp_voucher_product` (`voucher_id`,`product_id`),
+  KEY `idx_vp_voucher` (`voucher_id`),
+  KEY `idx_vp_product` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `voucher_products`
+  MODIFY `voucher_product_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `voucher_products`
+  ADD CONSTRAINT `fk_vp_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_vp_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+-- Foreign key untuk store_id di vouchers
+ALTER TABLE `vouchers`
+  ADD CONSTRAINT `fk_v_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE;
 
 -- Pencatatan penggunaan voucher
 CREATE TABLE IF NOT EXISTS `voucher_usages` (
