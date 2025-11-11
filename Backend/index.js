@@ -20,6 +20,7 @@ const checkoutRoutes = require("./routes/checkoutRoutes");
 const voucherSellerRoutes = require("./routes/voucherSellerRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const shippingRoutes = require("./routes/shippingRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use("/api/checkout", checkoutRoutes);
 app.use("/api/vouchers", voucherSellerRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/shipping", shippingRoutes);
+app.use("/api/payments", paymentRoutes);
 // Serve static uploads (product/store images)
 app.use("/uploads", express.static("uploads"));
 

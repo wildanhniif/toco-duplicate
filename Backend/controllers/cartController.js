@@ -331,13 +331,15 @@ exports.setShipping = async (req, res) => {
     if (totalWeight <= 0) totalWeight = 100; // fallback minimal 100gr
 
     // Panggil komerce calculate domestik
-    const apiKey = process.env.RAJAONGKIR_API_KEY;
+    const apiKey =
+      process.env.RAJAONGKIR_COST_API_KEY || process.env.RAJAONGKIR_API_KEY;
     const baseUrl =
       process.env.RAJAONGKIR_BASE_URL || "https://rajaongkir.komerce.id/api/v1";
     if (!apiKey)
-      return res
-        .status(500)
-        .json({ message: "RAJAONGKIR_API_KEY belum diset di environment" });
+      return res.status(500).json({
+        message:
+          "RAJAONGKIR_COST_API_KEY atau RAJAONGKIR_API_KEY belum diset di environment",
+      });
 
     const headers = {
       key: apiKey,

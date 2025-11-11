@@ -1,21 +1,33 @@
--- Clean SQL for toco_clone (kept tables only) - suitable for XAMPP/phpMyAdmin
--- Generated from exported DB (toco db terupdate.sql) with unused tables removed
--- Removed: reply_templates, store_about_pages, product_options, product_option_values
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Nov 11, 2025 at 02:37 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
+--
 -- Database: `toco_clone`
+--
 
 -- --------------------------------------------------------
--- Table: carts
-CREATE TABLE IF NOT EXISTS `carts` (
+
+--
+-- Table structure for table `carts`
+--
+
+CREATE TABLE `carts` (
   `cart_id` bigint(20) UNSIGNED NOT NULL,
   `user_id` int(11) NOT NULL,
   `selected_address_id` bigint(20) UNSIGNED DEFAULT NULL,
@@ -23,9 +35,20 @@ CREATE TABLE IF NOT EXISTS `carts` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `carts`
+--
+
+INSERT INTO `carts` (`cart_id`, `user_id`, `selected_address_id`, `created_at`, `updated_at`) VALUES
+(1, 6, 1, '2025-11-05 11:58:50', '2025-11-05 12:35:30');
+
 -- --------------------------------------------------------
--- Table: cart_items
-CREATE TABLE IF NOT EXISTS `cart_items` (
+
+--
+-- Table structure for table `cart_items`
+--
+
+CREATE TABLE `cart_items` (
   `cart_item_id` bigint(20) UNSIGNED NOT NULL,
   `cart_id` bigint(20) UNSIGNED NOT NULL,
   `store_id` int(10) UNSIGNED NOT NULL,
@@ -43,8 +66,12 @@ CREATE TABLE IF NOT EXISTS `cart_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- Table: cart_shipping_selections
-CREATE TABLE IF NOT EXISTS `cart_shipping_selections` (
+
+--
+-- Table structure for table `cart_shipping_selections`
+--
+
+CREATE TABLE `cart_shipping_selections` (
   `selection_id` bigint(20) UNSIGNED NOT NULL,
   `cart_id` bigint(20) UNSIGNED NOT NULL,
   `store_id` int(10) UNSIGNED NOT NULL,
@@ -59,8 +86,12 @@ CREATE TABLE IF NOT EXISTS `cart_shipping_selections` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- Table: cart_vouchers
-CREATE TABLE IF NOT EXISTS `cart_vouchers` (
+
+--
+-- Table structure for table `cart_vouchers`
+--
+
+CREATE TABLE `cart_vouchers` (
   `cart_id` bigint(20) UNSIGNED NOT NULL,
   `voucher_code` varchar(50) NOT NULL,
   `discount_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
@@ -68,8 +99,12 @@ CREATE TABLE IF NOT EXISTS `cart_vouchers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- Table: categories
-CREATE TABLE IF NOT EXISTS `categories` (
+
+--
+-- Table structure for table `categories`
+--
+
+CREATE TABLE `categories` (
   `category_id` int(10) UNSIGNED NOT NULL,
   `name` varchar(255) NOT NULL,
   `slug` varchar(255) NOT NULL,
@@ -78,6 +113,10 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `categories`
+--
 
 INSERT INTO `categories` (`category_id`, `name`, `slug`, `parent_id`, `image_url`, `created_at`, `updated_at`) VALUES
 (1, 'Jasa', 'jasa', NULL, NULL, '2025-10-26 17:05:08', '2025-10-26 17:05:08'),
@@ -88,14 +127,22 @@ INSERT INTO `categories` (`category_id`, `name`, `slug`, `parent_id`, `image_url
 (6, 'Properti - Rumah', 'properti-rumah', NULL, NULL, '2025-10-31 07:55:07', '2025-10-31 07:55:07');
 
 -- --------------------------------------------------------
--- Table: couriers
-CREATE TABLE IF NOT EXISTS `couriers` (
+
+--
+-- Table structure for table `couriers`
+--
+
+CREATE TABLE `couriers` (
   `courier_id` int(11) NOT NULL,
   `code` varchar(50) NOT NULL,
   `name` varchar(100) NOT NULL,
   `logo_url` varchar(255) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `couriers`
+--
 
 INSERT INTO `couriers` (`courier_id`, `code`, `name`, `logo_url`, `is_active`) VALUES
 (1, 'gosend', 'GoSend', NULL, 1),
@@ -107,8 +154,12 @@ INSERT INTO `couriers` (`courier_id`, `code`, `name`, `logo_url`, `is_active`) V
 (7, 'pos', 'POS Indonesia', NULL, 1);
 
 -- --------------------------------------------------------
--- Table: courier_services
-CREATE TABLE IF NOT EXISTS `courier_services` (
+
+--
+-- Table structure for table `courier_services`
+--
+
+CREATE TABLE `courier_services` (
   `service_id` int(11) NOT NULL,
   `courier_id` int(11) NOT NULL,
   `code` varchar(50) NOT NULL,
@@ -116,6 +167,10 @@ CREATE TABLE IF NOT EXISTS `courier_services` (
   `description` text DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `courier_services`
+--
 
 INSERT INTO `courier_services` (`service_id`, `courier_id`, `code`, `name`, `description`, `is_active`) VALUES
 (1, 1, 'GOSEND_SAMEDAY', 'GoSend Sameday', NULL, 1),
@@ -143,8 +198,131 @@ INSERT INTO `courier_services` (`service_id`, `courier_id`, `code`, `name`, `des
 (23, 7, 'POS_EXPRESS', 'Pos Express', NULL, 1);
 
 -- --------------------------------------------------------
--- Table: products
-CREATE TABLE IF NOT EXISTS `products` (
+
+--
+-- Table structure for table `orders`
+--
+
+CREATE TABLE `orders` (
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `order_code` varchar(30) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `store_id` int(10) UNSIGNED NOT NULL,
+  `address_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `subtotal_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `shipping_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `discount_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `total_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `voucher_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `voucher_code` varchar(50) DEFAULT NULL,
+  `status` enum('pending_unpaid','waiting_confirmation','processing','shipped','completed','cancelled') NOT NULL DEFAULT 'pending_unpaid',
+  `payment_status` enum('unpaid','paid','refunded') NOT NULL DEFAULT 'unpaid',
+  `payment_provider` varchar(50) DEFAULT NULL,
+  `payment_reference` varchar(100) DEFAULT NULL,
+  `shipping_courier_code` varchar(50) DEFAULT NULL,
+  `shipping_service_code` varchar(50) DEFAULT NULL,
+  `shipping_service_name` varchar(100) DEFAULT NULL,
+  `shipping_etd_min_days` int(11) DEFAULT NULL,
+  `shipping_etd_max_days` int(11) DEFAULT NULL,
+  `shipping_tracking_no` varchar(100) DEFAULT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`order_id`, `order_code`, `user_id`, `store_id`, `address_id`, `subtotal_amount`, `shipping_amount`, `discount_amount`, `total_amount`, `voucher_id`, `voucher_code`, `status`, `payment_status`, `payment_provider`, `payment_reference`, `shipping_courier_code`, `shipping_service_code`, `shipping_service_name`, `shipping_etd_min_days`, `shipping_etd_max_days`, `shipping_tracking_no`, `note`, `created_at`, `updated_at`) VALUES
+(1, 'TC251110-YX3X', 6, 2, 1, 1598000.00, 18000.00, 0.00, 1616000.00, NULL, NULL, 'pending_unpaid', 'unpaid', 'midtrans', 'b2dca979-47de-4b92-8221-0ac962d5fe1c', 'jne', 'REG', 'JNE Regular', 2, 3, NULL, NULL, '2025-11-10 16:18:23', '2025-11-10 16:22:38'),
+(2, 'TC251110-BZJZ', 6, 5, 1, 75000.00, 18000.00, 0.00, 93000.00, NULL, NULL, 'waiting_confirmation', 'paid', 'midtrans', 'A120251110162913XyeuoxYHntID', 'jne', 'REG', 'Jalur Nugraha Ekakurir (JNE)', 6, 6, NULL, NULL, '2025-11-10 16:18:23', '2025-11-10 16:29:56');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_items`
+--
+
+CREATE TABLE `order_items` (
+  `order_item_id` bigint(20) UNSIGNED NOT NULL,
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` bigint(20) UNSIGNED NOT NULL,
+  `product_name` varchar(255) NOT NULL,
+  `sku_code` varchar(100) DEFAULT NULL,
+  `price` decimal(15,2) NOT NULL,
+  `quantity` int(11) NOT NULL,
+  `weight_gram` int(11) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`order_item_id`, `order_id`, `product_id`, `product_name`, `sku_code`, `price`, `quantity`, `weight_gram`, `image_url`, `created_at`) VALUES
+(1, 1, 1, 'Sepatu Lari Pria GO-FAST XTreme', NULL, 799000.00, 2, 950, NULL, '2025-11-10 16:18:23'),
+(2, 2, 5, 'Kaos Polos Premium', 'KAOS-BLACK-M', 75000.00, 1, 200, NULL, '2025-11-10 16:18:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_shipping`
+--
+
+CREATE TABLE `order_shipping` (
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `recipient_name` varchar(255) NOT NULL,
+  `phone_number` varchar(30) NOT NULL,
+  `address_line` text NOT NULL,
+  `province` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `district` varchar(100) DEFAULT NULL,
+  `postal_code` varchar(10) DEFAULT NULL,
+  `latitude` decimal(10,8) DEFAULT NULL,
+  `longitude` decimal(11,8) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_shipping`
+--
+
+INSERT INTO `order_shipping` (`order_id`, `recipient_name`, `phone_number`, `address_line`, `province`, `city`, `district`, `postal_code`, `latitude`, `longitude`) VALUES
+(1, 'Budi Santoso', '081234567890', 'Lantai 2, dekat patung kuda', 'DKI JAKARTA', 'KOTA JAKARTA PUSAT', 'Gambir', '10110', -6.17539200, 106.82715300),
+(2, 'Budi Santoso', '081234567890', 'Lantai 2, dekat patung kuda', 'DKI JAKARTA', 'KOTA JAKARTA PUSAT', 'Gambir', '10110', -6.17539200, 106.82715300);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_status_logs`
+--
+
+CREATE TABLE `order_status_logs` (
+  `log_id` bigint(20) UNSIGNED NOT NULL,
+  `order_id` bigint(20) UNSIGNED NOT NULL,
+  `old_status` varchar(50) DEFAULT NULL,
+  `new_status` varchar(50) NOT NULL,
+  `changed_by` enum('system','user','seller','admin') NOT NULL DEFAULT 'system',
+  `note` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_status_logs`
+--
+
+INSERT INTO `order_status_logs` (`log_id`, `order_id`, `old_status`, `new_status`, `changed_by`, `note`, `created_at`) VALUES
+(1, 1, NULL, 'pending_unpaid', 'system', 'Order created', '2025-11-10 16:18:23'),
+(2, 2, NULL, 'pending_unpaid', 'system', 'Order created', '2025-11-10 16:18:23');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `products`
+--
+
+CREATE TABLE `products` (
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `store_id` int(10) UNSIGNED NOT NULL,
   `category_id` int(10) UNSIGNED NOT NULL,
@@ -169,18 +347,26 @@ CREATE TABLE IF NOT EXISTS `products` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `products`
+--
+
 INSERT INTO `products` (`product_id`, `store_id`, `category_id`, `name`, `slug`, `description`, `product_classification`, `price`, `stock`, `sku`, `condition`, `brand`, `weight_gram`, `dimensions`, `is_preorder`, `use_store_courier`, `insurance`, `status`, `average_rating`, `review_count`, `created_at`, `updated_at`) VALUES
-(1, 2, 2, 'Sepatu Lari Pria GO-FAST XTreme', 'sepatu-lari-pria-go-fast-xtreme', '<p>Rasakan kecepatan tanpa batas dengan GO-FAST XTreme. Didesain untuk pelari profesional dengan teknologi bantalan terbaru.</p><ul><li>Bahan: Mesh premium</li><li>Sol: Karet anti-slip</li><li>Warna: Biru Navy</li></ul>', 'marketplace', 799000.00, 150, 'GF-XT-NAVY-42', 'new', 'GO-FAST', 950, '{"length":32,"width":24,"height":12}', 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-30 15:48:58', '2025-10-30 15:48:58'),
+(1, 2, 2, 'Sepatu Lari Pria GO-FAST XTreme', 'sepatu-lari-pria-go-fast-xtreme', '<p>Rasakan kecepatan tanpa batas dengan GO-FAST XTreme. Didesain untuk pelari profesional dengan teknologi bantalan terbaru.</p><ul><li>Bahan: Mesh premium</li><li>Sol: Karet anti-slip</li><li>Warna: Biru Navy</li></ul>', 'marketplace', 799000.00, 148, 'GF-XT-NAVY-42', 'new', 'GO-FAST', 950, '{\"length\":32,\"width\":24,\"height\":12}', 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-30 15:48:58', '2025-11-10 16:18:23'),
 (3, 2, 2, 'Kaos Polos Premium Katun', 'kaos-polos-premium-katun', 'Kaos bahan katun combed 30s, nyaman dan adem.', 'marketplace', 50000.00, 0, NULL, 'new', 'Toco Brand', 250, NULL, 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-31 01:33:10', '2025-10-31 01:33:10'),
-(4, 5, 3, 'Sepatu Lari GO-FAST XT', 'sepatu-lari-go-fast-xt', 'Sepatu lari nyaman', 'marketplace', 299000.00, 25, 'GOFAST-42-NAVY', 'new', 'GO-FAST', 900, '{"length":32,"width":22,"height":12}', 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-31 08:15:38', '2025-10-31 08:15:38'),
-(5, 5, 3, 'Kaos Polos Premium', 'kaos-polos-premium', 'Kaos bahan premium', 'marketplace', 75000.00, 0, NULL, 'new', 'LocalBrand', 200, '{"length":30,"width":20,"height":2}', 0, 1, 'opsional', 'inactive', 0.00, 0, '2025-10-31 08:18:41', '2025-10-31 08:18:41'),
+(4, 5, 3, 'Sepatu Lari GO-FAST XT', 'sepatu-lari-go-fast-xt', 'Sepatu lari nyaman', 'marketplace', 299000.00, 25, 'GOFAST-42-NAVY', 'new', 'GO-FAST', 900, '{\"length\":32,\"width\":22,\"height\":12}', 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-31 08:15:38', '2025-10-31 08:15:38'),
+(5, 5, 3, 'Kaos Polos Premium', 'kaos-polos-premium', 'Kaos bahan premium', 'marketplace', 75000.00, 10, 'TEST-BALA-BALA', 'new', 'LocalBrand', 200, '{\"length\":30,\"width\":20,\"height\":2}', 0, 1, 'opsional', 'inactive', 0.00, 0, '2025-10-31 08:18:41', '2025-11-05 12:57:35'),
 (6, 5, 4, 'Yamaha NMAX 2021', 'yamaha-nmax-2021', 'Kondisi mulus', 'classified', 27000000.00, 1, NULL, 'used', 'Yamaha', 100000, NULL, 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-31 08:20:59', '2025-10-31 08:20:59'),
 (7, 5, 5, 'Honda Jazz RS 2018', 'honda-jazz-rs-2018', 'Tangan pertama', 'classified', 175000000.00, 1, NULL, 'used', 'Honda', 100000, NULL, 0, 0, 'opsional', 'active', 0.00, 0, '2025-10-31 08:21:20', '2025-10-31 08:29:05'),
 (8, 5, 6, 'Rumah Siap Huni Antapani', 'rumah-siap-huni-antapani', 'Lingkungan nyaman', 'classified', 950000000.00, 1, NULL, 'used', NULL, 0, NULL, 0, 0, 'opsional', 'inactive', 0.00, 0, '2025-10-31 08:21:38', '2025-10-31 08:21:38');
 
 -- --------------------------------------------------------
--- Table: product_images
-CREATE TABLE IF NOT EXISTS `product_images` (
+
+--
+-- Table structure for table `product_images`
+--
+
+CREATE TABLE `product_images` (
   `image_id` bigint(20) UNSIGNED NOT NULL,
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `url` varchar(255) NOT NULL,
@@ -188,13 +374,71 @@ CREATE TABLE IF NOT EXISTS `product_images` (
   `sort_order` smallint(5) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `product_images`
+--
+
 INSERT INTO `product_images` (`image_id`, `product_id`, `url`, `alt_text`, `sort_order`) VALUES
 (1, 4, 'https://www.google.com/imgres?q=sample%20image&imgurl=https%3A%2F%2Fthumbs.dreamstime.com%2Fb%2Fsample-jpeg-fluffy-white-pomeranian-puppy-sits-looks-camera-colorful-balls-front-364720569.jpg&imgrefurl=https%3A%2F%2Fwww.dreamstime.com%2Fphotos-images%2Fsam', NULL, 0),
 (2, 4, 'https://www.google.com/imgres?q=sample%20image&imgurl=https%3A%2F%2Fcdn.pixabay.com%2Fphoto%2F2022%2F01%2F28%2F18%2F32%2Fleaves-6975462_1280.png&imgrefurl=https%3A%2F%2Fpixabay.com%2Fimages%2Fsearch%2Fsample%2F&docid=2xXLFxhaENkZgM&tbnid=wq_9Tnp_-uy-cM&ve', NULL, 1);
 
 -- --------------------------------------------------------
--- Table: product_promotions
-CREATE TABLE IF NOT EXISTS `product_promotions` (
+
+--
+-- Table structure for table `product_options`
+--
+
+CREATE TABLE `product_options` (
+  `option_id` int(10) UNSIGNED NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `store_id` int(10) UNSIGNED DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_options`
+--
+
+INSERT INTO `product_options` (`option_id`, `name`, `store_id`) VALUES
+(3, 'Penyimpanan', NULL),
+(2, 'Ukuran', NULL),
+(1, 'Warna', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `product_option_values`
+--
+
+CREATE TABLE `product_option_values` (
+  `value_id` int(10) UNSIGNED NOT NULL,
+  `option_id` int(10) UNSIGNED NOT NULL,
+  `value` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_option_values`
+--
+
+INSERT INTO `product_option_values` (`value_id`, `option_id`, `value`) VALUES
+(1, 1, 'Hitam'),
+(2, 1, 'Putih'),
+(3, 1, 'Merah Maroon'),
+(4, 1, 'Biru Navy'),
+(5, 2, 'S'),
+(6, 2, 'M'),
+(7, 2, 'L'),
+(8, 2, 'XL'),
+(9, 3, '128GB'),
+(10, 3, '256GB'),
+(11, 3, '512GB');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `product_promotions`
+--
+
+CREATE TABLE `product_promotions` (
   `promotion_id` bigint(20) UNSIGNED NOT NULL,
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `store_id` int(10) UNSIGNED NOT NULL,
@@ -204,8 +448,12 @@ CREATE TABLE IF NOT EXISTS `product_promotions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- Table: product_skus
-CREATE TABLE IF NOT EXISTS `product_skus` (
+
+--
+-- Table structure for table `product_skus`
+--
+
+CREATE TABLE `product_skus` (
   `product_sku_id` bigint(20) UNSIGNED NOT NULL,
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `sku_code` varchar(120) NOT NULL,
@@ -217,19 +465,31 @@ CREATE TABLE IF NOT EXISTS `product_skus` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `product_skus`
+--
+
 INSERT INTO `product_skus` (`product_sku_id`, `product_id`, `sku_code`, `price`, `stock`, `weight_gram`, `dimensions`, `created_at`, `updated_at`) VALUES
-(1, 5, 'KAOS-BLACK-M', 75000.00, 10, 200, NULL, '2025-10-31 08:18:41', '2025-10-31 08:18:41'),
+(1, 5, 'KAOS-BLACK-M', 75000.00, 9, 200, NULL, '2025-10-31 08:18:41', '2025-11-10 16:18:23'),
 (2, 5, 'KAOS-BLACK-L', 75000.00, 8, 200, NULL, '2025-10-31 08:18:41', '2025-10-31 08:18:41'),
 (3, 5, 'KAOS-WHITE-M', 75000.00, 5, 200, NULL, '2025-10-31 08:18:41', '2025-10-31 08:18:41'),
 (4, 5, 'KAOS-WHITE-L', 75000.00, 3, 200, NULL, '2025-10-31 08:18:41', '2025-10-31 08:18:41');
 
 -- --------------------------------------------------------
--- Table: product_sku_options
-CREATE TABLE IF NOT EXISTS `product_sku_options` (
+
+--
+-- Table structure for table `product_sku_options`
+--
+
+CREATE TABLE `product_sku_options` (
   `product_sku_option_id` bigint(20) UNSIGNED NOT NULL,
   `product_sku_id` bigint(20) UNSIGNED NOT NULL,
   `option_id` bigint(20) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_sku_options`
+--
 
 INSERT INTO `product_sku_options` (`product_sku_option_id`, `product_sku_id`, `option_id`) VALUES
 (1, 1, 1),
@@ -242,26 +502,42 @@ INSERT INTO `product_sku_options` (`product_sku_option_id`, `product_sku_id`, `o
 (8, 4, 4);
 
 -- --------------------------------------------------------
--- Table: product_variant_attributes
-CREATE TABLE IF NOT EXISTS `product_variant_attributes` (
+
+--
+-- Table structure for table `product_variant_attributes`
+--
+
+CREATE TABLE `product_variant_attributes` (
   `attribute_id` bigint(20) UNSIGNED NOT NULL,
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `attribute_name` varchar(100) NOT NULL,
   `sort_order` smallint(5) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `product_variant_attributes`
+--
+
 INSERT INTO `product_variant_attributes` (`attribute_id`, `product_id`, `attribute_name`, `sort_order`) VALUES
 (1, 5, 'Color', 0),
 (2, 5, 'Size', 1);
 
 -- --------------------------------------------------------
--- Table: product_variant_attribute_options
-CREATE TABLE IF NOT EXISTS `product_variant_attribute_options` (
+
+--
+-- Table structure for table `product_variant_attribute_options`
+--
+
+CREATE TABLE `product_variant_attribute_options` (
   `option_id` bigint(20) UNSIGNED NOT NULL,
   `attribute_id` bigint(20) UNSIGNED NOT NULL,
   `option_value` varchar(100) NOT NULL,
   `sort_order` smallint(5) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_variant_attribute_options`
+--
 
 INSERT INTO `product_variant_attribute_options` (`option_id`, `attribute_id`, `option_value`, `sort_order`) VALUES
 (1, 1, 'Black', 0),
@@ -270,8 +546,12 @@ INSERT INTO `product_variant_attribute_options` (`option_id`, `attribute_id`, `o
 (4, 2, 'L', 1);
 
 -- --------------------------------------------------------
--- Table: property_specs
-CREATE TABLE IF NOT EXISTS `property_specs` (
+
+--
+-- Table structure for table `property_specs`
+--
+
+CREATE TABLE `property_specs` (
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `transaction_type` enum('sale','rent') NOT NULL,
   `price` decimal(15,2) NOT NULL,
@@ -286,12 +566,35 @@ CREATE TABLE IF NOT EXISTS `property_specs` (
   `longitude` decimal(11,8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `property_specs`
+--
+
 INSERT INTO `property_specs` (`product_id`, `transaction_type`, `price`, `building_area_m2`, `land_area_m2`, `bedrooms`, `bathrooms`, `floors`, `certificate_text`, `facilities_text`, `latitude`, `longitude`) VALUES
 (8, 'sale', 950000000.00, 120, 150, 3, 2, 2, 'SHM', 'Keamanan 24 jam, One Gate', -6.92000000, 107.62000000);
 
 -- --------------------------------------------------------
--- Table: stores
-CREATE TABLE IF NOT EXISTS `stores` (
+
+--
+-- Table structure for table `reply_templates`
+--
+
+CREATE TABLE `reply_templates` (
+  `reply_id` int(11) NOT NULL,
+  `store_id` int(10) UNSIGNED NOT NULL,
+  `content` text NOT NULL,
+  `display_order` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `stores`
+--
+
+CREATE TABLE `stores` (
   `store_id` int(10) UNSIGNED NOT NULL,
   `user_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -323,19 +626,47 @@ CREATE TABLE IF NOT EXISTS `stores` (
   `show_phone_number` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `stores`
+--
+
 INSERT INTO `stores` (`store_id`, `user_id`, `name`, `slug`, `profile_image_url`, `background_image_url`, `description`, `business_phone`, `show_business_phone`, `address_detail`, `postal_code`, `province_id`, `city_id`, `district_id`, `sub_district_id`, `province`, `city`, `district`, `sub_district`, `latitude`, `longitude`, `use_cloudflare`, `is_active`, `created_at`, `updated_at`, `is_on_holiday`, `holiday_start_date`, `holiday_end_date`, `show_phone_number`) VALUES
 (2, 6, 'Toko bahan kue', 'toko-bahan-kue', NULL, NULL, 'Menyediakan bahan bahan kue', '081274967462', 0, 'Gedung Jaya Plaza Lt. 2 Blok A No. 15', '40211', '32', '32.73', '32.73.16', '32.73.16.1', 'Jawa Barat', 'Kota Bandung', 'Astanaanyar', 'Karanganyar', -6.92837500, 107.60195300, 0, 1, '2025-10-28 14:51:35', '2025-10-28 15:02:40', 0, NULL, NULL, 0),
 (5, 8, 'Suskes Selalu', 'suskes-selalu', '/uploads/stores/profile_image-undefined-1761896264906.jpg', '/uploads/stores/background_image-undefined-1761896264952.jpg', 'Update Deskripsi', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 1, '2025-10-31 07:34:48', '2025-10-31 07:37:44', 0, NULL, NULL, 0);
 
 -- --------------------------------------------------------
--- Table: store_courier_distance_rates
-CREATE TABLE IF NOT EXISTS `store_courier_distance_rates` (
+
+--
+-- Table structure for table `store_about_pages`
+--
+
+CREATE TABLE `store_about_pages` (
+  `about_id` bigint(20) UNSIGNED NOT NULL,
+  `store_id` int(10) UNSIGNED NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `thumbnail_url` varchar(255) NOT NULL,
+  `content` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `store_courier_distance_rates`
+--
+
+CREATE TABLE `store_courier_distance_rates` (
   `courierDistance_id` int(11) NOT NULL,
   `setting_id` int(11) NOT NULL,
   `from_km` decimal(10,2) NOT NULL,
   `to_km` decimal(10,2) NOT NULL,
   `price` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `store_courier_distance_rates`
+--
 
 INSERT INTO `store_courier_distance_rates` (`courierDistance_id`, `setting_id`, `from_km`, `to_km`, `price`) VALUES
 (10, 2, 0.00, 5.00, 10000),
@@ -347,8 +678,12 @@ INSERT INTO `store_courier_distance_rates` (`courierDistance_id`, `setting_id`, 
 (20, 2, 30.01, 1000.00, 50000);
 
 -- --------------------------------------------------------
--- Table: store_courier_settings
-CREATE TABLE IF NOT EXISTS `store_courier_settings` (
+
+--
+-- Table structure for table `store_courier_settings`
+--
+
+CREATE TABLE `store_courier_settings` (
   `setting_id` int(11) NOT NULL,
   `store_id` int(10) UNSIGNED NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 0,
@@ -357,28 +692,48 @@ CREATE TABLE IF NOT EXISTS `store_courier_settings` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `store_courier_settings`
+--
+
 INSERT INTO `store_courier_settings` (`setting_id`, `store_id`, `is_active`, `max_delivery_km`, `created_at`, `updated_at`) VALUES
 (2, 2, 1, 999.00, '2025-11-04 14:20:12', '2025-11-04 14:30:04');
 
 -- --------------------------------------------------------
--- Table: store_courier_weight_rates
-CREATE TABLE IF NOT EXISTS `store_courier_weight_rates` (
+
+--
+-- Table structure for table `store_courier_weight_rates`
+--
+
+CREATE TABLE `store_courier_weight_rates` (
   `courierWeight_id` int(11) NOT NULL,
   `setting_id` int(11) NOT NULL,
   `above_weight_gr` int(11) NOT NULL,
   `additional_price` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `store_courier_weight_rates`
+--
+
 INSERT INTO `store_courier_weight_rates` (`courierWeight_id`, `setting_id`, `above_weight_gr`, `additional_price`) VALUES
 (1, 2, 1000, 3000),
 (2, 2, 2000, 3000);
 
 -- --------------------------------------------------------
--- Table: store_selected_services
-CREATE TABLE IF NOT EXISTS `store_selected_services` (
+
+--
+-- Table structure for table `store_selected_services`
+--
+
+CREATE TABLE `store_selected_services` (
   `store_id` int(10) UNSIGNED NOT NULL,
   `service_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `store_selected_services`
+--
 
 INSERT INTO `store_selected_services` (`store_id`, `service_id`) VALUES
 (2, 10),
@@ -388,8 +743,12 @@ INSERT INTO `store_selected_services` (`store_id`, `service_id`) VALUES
 (2, 16);
 
 -- --------------------------------------------------------
--- Table: users
-CREATE TABLE IF NOT EXISTS `users` (
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
   `full_name` varchar(255) NOT NULL,
   `phone_number` varchar(20) NOT NULL,
@@ -404,14 +763,22 @@ CREATE TABLE IF NOT EXISTS `users` (
   `birth_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `users`
+--
+
 INSERT INTO `users` (`user_id`, `full_name`, `phone_number`, `email`, `password`, `role`, `is_verified`, `google_id`, `facebook_id`, `created_at`, `gender`, `birth_date`) VALUES
 (6, 'Wildan Hanif', '085346912387', 'dannif@example.com', '$2b$10$Zew98lNQ/fTaWFOA00XiU.VPdykr1kKoip7c9DcgnWrw.rGJhG80G', 'seller', 1, NULL, NULL, '2025-10-28 14:41:40', 'Laki-laki', '2004-08-17'),
 (8, 'Budi Santoso', '081234567890', 'budi@example.com', '$2b$10$9f8KhYFxs7UWafbUl/n7FOl3XJFK256CfZ4AFLAGA.kJL/J2o2J76', 'seller', 1, NULL, NULL, '2025-10-31 07:33:14', NULL, NULL),
 (12, 'poposiroyo123', '089572583562', 'admin@gmail.com', '$2b$10$onHHT4sJUb5cDTATBVtipuV4sIMJgTt4mjZDSRfo6/2T0RsEiXjBi', 'user', 1, NULL, NULL, '2025-10-31 16:32:03', NULL, NULL);
 
 -- --------------------------------------------------------
--- Table: user_addresses
-CREATE TABLE IF NOT EXISTS `user_addresses` (
+
+--
+-- Table structure for table `user_addresses`
+--
+
+CREATE TABLE `user_addresses` (
   `userAddress_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `label` varchar(50) NOT NULL,
@@ -431,12 +798,20 @@ CREATE TABLE IF NOT EXISTS `user_addresses` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `user_addresses`
+--
+
 INSERT INTO `user_addresses` (`userAddress_id`, `user_id`, `label`, `recipient_name`, `phone_number`, `latitude`, `longitude`, `map_address`, `address_detail`, `postal_code`, `province`, `city`, `district`, `sub_district`, `is_primary`, `created_at`, `updated_at`) VALUES
 (1, 6, 'Rumah', 'Budi Santoso', '081234567890', -6.17539200, 106.82715300, 'Monumen Nasional, Jalan Silang Merdeka, Gambir, Jakarta Pusat, DKI Jakarta, 10110, Indonesia', 'Lantai 2, dekat patung kuda', '10110', 'DKI JAKARTA', 'KOTA JAKARTA PUSAT', 'Gambir', 'Gambir', 1, '2025-10-28 16:04:21', '2025-10-28 16:04:21');
 
 -- --------------------------------------------------------
--- Table: vehicle_mobil_specs
-CREATE TABLE IF NOT EXISTS `vehicle_mobil_specs` (
+
+--
+-- Table structure for table `vehicle_mobil_specs`
+--
+
+CREATE TABLE `vehicle_mobil_specs` (
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `brand` varchar(100) NOT NULL,
   `model` varchar(100) NOT NULL,
@@ -454,12 +829,20 @@ CREATE TABLE IF NOT EXISTS `vehicle_mobil_specs` (
   `longitude` decimal(11,8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `vehicle_mobil_specs`
+--
+
 INSERT INTO `vehicle_mobil_specs` (`product_id`, `brand`, `model`, `year`, `transmission`, `mileage_km`, `license_plate`, `color`, `fuel`, `engine_cc`, `seat_count`, `tax_expiry_date`, `completeness_text`, `latitude`, `longitude`) VALUES
 (7, 'Honda', 'Jazz RS', 2018, 'automatic', 45000, 'D 1234 AB', 'Orange', 'Gasoline', 1500, 5, '2026-09-01', 'STNK, BPKB', -6.91000000, 107.61000000);
 
 -- --------------------------------------------------------
--- Table: vehicle_motor_specs
-CREATE TABLE IF NOT EXISTS `vehicle_motor_specs` (
+
+--
+-- Table structure for table `vehicle_motor_specs`
+--
+
+CREATE TABLE `vehicle_motor_specs` (
   `product_id` bigint(20) UNSIGNED NOT NULL,
   `brand` varchar(100) NOT NULL,
   `year` smallint(4) NOT NULL,
@@ -475,12 +858,20 @@ CREATE TABLE IF NOT EXISTS `vehicle_motor_specs` (
   `longitude` decimal(11,8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `vehicle_motor_specs`
+--
+
 INSERT INTO `vehicle_motor_specs` (`product_id`, `brand`, `year`, `model`, `transmission`, `mileage_km`, `engine_cc`, `color`, `fuel`, `tax_expiry_date`, `completeness_text`, `latitude`, `longitude`) VALUES
 (6, 'Yamaha', 2021, 'NMAX', 'automatic', 12000, 155, 'Black', 'Gasoline', '2026-05-01', 'STNK, BPKB', -6.90000000, 107.60000000);
 
 -- --------------------------------------------------------
--- Table: vouchers
-CREATE TABLE IF NOT EXISTS `vouchers` (
+
+--
+-- Table structure for table `vouchers`
+--
+
+CREATE TABLE `vouchers` (
   `voucher_id` bigint(20) UNSIGNED NOT NULL,
   `store_id` int(10) UNSIGNED DEFAULT NULL,
   `code` varchar(50) NOT NULL,
@@ -503,12 +894,20 @@ CREATE TABLE IF NOT EXISTS `vouchers` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `vouchers`
+--
+
 INSERT INTO `vouchers` (`voucher_id`, `store_id`, `code`, `voucher_type`, `type`, `value`, `max_discount`, `min_discount`, `min_order_amount`, `title`, `description`, `target`, `applicable_to`, `start_at`, `end_at`, `usage_limit_total`, `usage_limit_per_user`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 2, 'HARI_RAYA_50', 'discount', 'percent', 50.00, 100000.00, 10000.00, 50000.00, 'Diskon Spesial Hari Raya', 'Dapatkan diskon hingga 50% untuk semua produk', 'public', 'all_products', '2025-11-01 00:00:00', '2025-11-30 23:59:59', 100, 2, 1, '2025-11-03 04:15:48', '2025-11-03 04:15:48');
 
 -- --------------------------------------------------------
--- Table: voucher_products
-CREATE TABLE IF NOT EXISTS `voucher_products` (
+
+--
+-- Table structure for table `voucher_products`
+--
+
+CREATE TABLE `voucher_products` (
   `voucher_product_id` bigint(20) UNSIGNED NOT NULL,
   `voucher_id` bigint(20) UNSIGNED NOT NULL,
   `product_id` bigint(20) UNSIGNED NOT NULL,
@@ -516,8 +915,12 @@ CREATE TABLE IF NOT EXISTS `voucher_products` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- Table: voucher_usages
-CREATE TABLE IF NOT EXISTS `voucher_usages` (
+
+--
+-- Table structure for table `voucher_usages`
+--
+
+CREATE TABLE `voucher_usages` (
   `usage_id` bigint(20) UNSIGNED NOT NULL,
   `voucher_id` bigint(20) UNSIGNED NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -525,283 +928,651 @@ CREATE TABLE IF NOT EXISTS `voucher_usages` (
   `used_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ----------------------------
--- Indexes
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `carts`
+--
 ALTER TABLE `carts`
   ADD PRIMARY KEY (`cart_id`),
   ADD UNIQUE KEY `uniq_user_cart` (`user_id`);
 
+--
+-- Indexes for table `cart_items`
+--
 ALTER TABLE `cart_items`
   ADD PRIMARY KEY (`cart_item_id`),
   ADD KEY `idx_cart_items_cart` (`cart_id`),
   ADD KEY `idx_cart_items_store` (`store_id`),
   ADD KEY `fk_ci_product` (`product_id`);
 
+--
+-- Indexes for table `cart_shipping_selections`
+--
 ALTER TABLE `cart_shipping_selections`
   ADD PRIMARY KEY (`selection_id`),
   ADD UNIQUE KEY `uniq_cart_store` (`cart_id`,`store_id`);
 
+--
+-- Indexes for table `cart_vouchers`
+--
 ALTER TABLE `cart_vouchers`
   ADD PRIMARY KEY (`cart_id`),
   ADD KEY `fk_cv_voucher` (`voucher_id`);
 
+--
+-- Indexes for table `categories`
+--
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`),
   ADD UNIQUE KEY `slug_unique` (`slug`),
   ADD KEY `parent_id` (`parent_id`);
 
+--
+-- Indexes for table `couriers`
+--
 ALTER TABLE `couriers`
   ADD PRIMARY KEY (`courier_id`),
   ADD UNIQUE KEY `code` (`code`);
 
+--
+-- Indexes for table `courier_services`
+--
 ALTER TABLE `courier_services`
   ADD PRIMARY KEY (`service_id`),
   ADD UNIQUE KEY `code` (`code`),
   ADD KEY `fk_service_courier` (`courier_id`);
 
+--
+-- Indexes for table `orders`
+--
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`order_id`),
+  ADD UNIQUE KEY `uniq_order_code` (`order_code`),
+  ADD KEY `idx_orders_user` (`user_id`),
+  ADD KEY `idx_orders_store` (`store_id`),
+  ADD KEY `idx_orders_status` (`status`),
+  ADD KEY `fk_orders_voucher` (`voucher_id`);
+
+--
+-- Indexes for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD PRIMARY KEY (`order_item_id`),
+  ADD KEY `idx_oi_order` (`order_id`),
+  ADD KEY `fk_oi_product` (`product_id`);
+
+--
+-- Indexes for table `order_shipping`
+--
+ALTER TABLE `order_shipping`
+  ADD PRIMARY KEY (`order_id`);
+
+--
+-- Indexes for table `order_status_logs`
+--
+ALTER TABLE `order_status_logs`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `idx_osl_order` (`order_id`);
+
+--
+-- Indexes for table `products`
+--
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
   ADD UNIQUE KEY `slug_unique` (`slug`),
   ADD UNIQUE KEY `store_sku_unique` (`store_id`,`sku`),
   ADD KEY `category_id` (`category_id`);
 
+--
+-- Indexes for table `product_images`
+--
 ALTER TABLE `product_images`
   ADD PRIMARY KEY (`image_id`),
   ADD KEY `product_id` (`product_id`);
 
+--
+-- Indexes for table `product_options`
+--
+ALTER TABLE `product_options`
+  ADD PRIMARY KEY (`option_id`),
+  ADD UNIQUE KEY `store_option_name_unique` (`store_id`,`name`);
+
+--
+-- Indexes for table `product_option_values`
+--
+ALTER TABLE `product_option_values`
+  ADD PRIMARY KEY (`value_id`),
+  ADD KEY `option_id` (`option_id`);
+
+--
+-- Indexes for table `product_promotions`
+--
 ALTER TABLE `product_promotions`
   ADD PRIMARY KEY (`promotion_id`),
   ADD KEY `idx_pp_product` (`product_id`),
   ADD KEY `idx_pp_store` (`store_id`),
   ADD KEY `idx_pp_expires` (`expires_at`);
 
+--
+-- Indexes for table `product_skus`
+--
 ALTER TABLE `product_skus`
   ADD PRIMARY KEY (`product_sku_id`),
   ADD UNIQUE KEY `uniq_sku_per_product` (`product_id`,`sku_code`),
   ADD KEY `idx_ps_product` (`product_id`);
 
+--
+-- Indexes for table `product_sku_options`
+--
 ALTER TABLE `product_sku_options`
   ADD PRIMARY KEY (`product_sku_option_id`),
   ADD KEY `idx_pso_sku` (`product_sku_id`),
   ADD KEY `idx_pso_option` (`option_id`);
 
+--
+-- Indexes for table `product_variant_attributes`
+--
 ALTER TABLE `product_variant_attributes`
   ADD PRIMARY KEY (`attribute_id`),
   ADD KEY `idx_pva_product` (`product_id`);
 
+--
+-- Indexes for table `product_variant_attribute_options`
+--
 ALTER TABLE `product_variant_attribute_options`
   ADD PRIMARY KEY (`option_id`),
   ADD KEY `idx_pvao_attribute` (`attribute_id`);
 
+--
+-- Indexes for table `property_specs`
+--
 ALTER TABLE `property_specs`
   ADD PRIMARY KEY (`product_id`);
 
+--
+-- Indexes for table `reply_templates`
+--
+ALTER TABLE `reply_templates`
+  ADD PRIMARY KEY (`reply_id`),
+  ADD KEY `reply_templates_ibfk_1` (`store_id`);
+
+--
+-- Indexes for table `stores`
+--
 ALTER TABLE `stores`
   ADD PRIMARY KEY (`store_id`),
   ADD UNIQUE KEY `slug` (`slug`),
   ADD KEY `stores_ibfk_1` (`user_id`);
 
+--
+-- Indexes for table `store_about_pages`
+--
+ALTER TABLE `store_about_pages`
+  ADD PRIMARY KEY (`about_id`),
+  ADD KEY `fk_about_page_to_store` (`store_id`);
+
+--
+-- Indexes for table `store_courier_distance_rates`
+--
 ALTER TABLE `store_courier_distance_rates`
   ADD PRIMARY KEY (`courierDistance_id`),
   ADD KEY `fk_courier_setting_distance` (`setting_id`);
 
+--
+-- Indexes for table `store_courier_settings`
+--
 ALTER TABLE `store_courier_settings`
   ADD PRIMARY KEY (`setting_id`),
   ADD UNIQUE KEY `store_id_unique` (`store_id`);
 
+--
+-- Indexes for table `store_courier_weight_rates`
+--
 ALTER TABLE `store_courier_weight_rates`
   ADD PRIMARY KEY (`courierWeight_id`),
   ADD KEY `fk_courier_setting_weight` (`setting_id`);
 
+--
+-- Indexes for table `store_selected_services`
+--
 ALTER TABLE `store_selected_services`
   ADD PRIMARY KEY (`store_id`,`service_id`),
   ADD KEY `fk_selected_service` (`service_id`);
 
+--
+-- Indexes for table `users`
+--
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `phone_number` (`phone_number`),
   ADD UNIQUE KEY `email` (`email`);
 
+--
+-- Indexes for table `user_addresses`
+--
 ALTER TABLE `user_addresses`
   ADD PRIMARY KEY (`userAddress_id`),
   ADD KEY `user_addresses_ibfk_1` (`user_id`);
 
+--
+-- Indexes for table `vehicle_mobil_specs`
+--
 ALTER TABLE `vehicle_mobil_specs`
   ADD PRIMARY KEY (`product_id`);
 
+--
+-- Indexes for table `vehicle_motor_specs`
+--
 ALTER TABLE `vehicle_motor_specs`
   ADD PRIMARY KEY (`product_id`);
 
+--
+-- Indexes for table `vouchers`
+--
 ALTER TABLE `vouchers`
   ADD PRIMARY KEY (`voucher_id`),
   ADD UNIQUE KEY `uniq_voucher_code` (`code`),
   ADD KEY `idx_v_store` (`store_id`),
   ADD KEY `idx_v_start_end` (`start_at`,`end_at`);
 
+--
+-- Indexes for table `voucher_products`
+--
 ALTER TABLE `voucher_products`
   ADD PRIMARY KEY (`voucher_product_id`),
   ADD UNIQUE KEY `uniq_vp_voucher_product` (`voucher_id`,`product_id`),
   ADD KEY `idx_vp_voucher` (`voucher_id`),
   ADD KEY `idx_vp_product` (`product_id`);
 
+--
+-- Indexes for table `voucher_usages`
+--
 ALTER TABLE `voucher_usages`
   ADD PRIMARY KEY (`usage_id`),
   ADD KEY `idx_vu_voucher` (`voucher_id`),
   ADD KEY `idx_vu_user` (`user_id`);
 
--- ----------------------------
--- AUTO_INCREMENT
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `carts`
+--
 ALTER TABLE `carts`
-  MODIFY `cart_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `cart_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
+--
+-- AUTO_INCREMENT for table `cart_items`
+--
 ALTER TABLE `cart_items`
-  MODIFY `cart_item_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `cart_item_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
+--
+-- AUTO_INCREMENT for table `cart_shipping_selections`
+--
 ALTER TABLE `cart_shipping_selections`
-  MODIFY `selection_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `selection_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
+--
+-- AUTO_INCREMENT for table `categories`
+--
 ALTER TABLE `categories`
   MODIFY `category_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
+--
+-- AUTO_INCREMENT for table `couriers`
+--
 ALTER TABLE `couriers`
   MODIFY `courier_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
+--
+-- AUTO_INCREMENT for table `courier_services`
+--
 ALTER TABLE `courier_services`
   MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
+--
+-- AUTO_INCREMENT for table `orders`
+--
+ALTER TABLE `orders`
+  MODIFY `order_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `order_items`
+--
+ALTER TABLE `order_items`
+  MODIFY `order_item_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `order_status_logs`
+--
+ALTER TABLE `order_status_logs`
+  MODIFY `log_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `products`
+--
 ALTER TABLE `products`
   MODIFY `product_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
+--
+-- AUTO_INCREMENT for table `product_images`
+--
 ALTER TABLE `product_images`
   MODIFY `image_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
+--
+-- AUTO_INCREMENT for table `product_options`
+--
+ALTER TABLE `product_options`
+  MODIFY `option_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `product_option_values`
+--
+ALTER TABLE `product_option_values`
+  MODIFY `value_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `product_promotions`
+--
 ALTER TABLE `product_promotions`
   MODIFY `promotion_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT for table `product_skus`
+--
 ALTER TABLE `product_skus`
   MODIFY `product_sku_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
+--
+-- AUTO_INCREMENT for table `product_sku_options`
+--
 ALTER TABLE `product_sku_options`
   MODIFY `product_sku_option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
+--
+-- AUTO_INCREMENT for table `product_variant_attributes`
+--
 ALTER TABLE `product_variant_attributes`
   MODIFY `attribute_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
+--
+-- AUTO_INCREMENT for table `product_variant_attribute_options`
+--
 ALTER TABLE `product_variant_attribute_options`
   MODIFY `option_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
+--
+-- AUTO_INCREMENT for table `reply_templates`
+--
+ALTER TABLE `reply_templates`
+  MODIFY `reply_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `stores`
+--
 ALTER TABLE `stores`
   MODIFY `store_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
+--
+-- AUTO_INCREMENT for table `store_about_pages`
+--
+ALTER TABLE `store_about_pages`
+  MODIFY `about_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `store_courier_distance_rates`
+--
 ALTER TABLE `store_courier_distance_rates`
   MODIFY `courierDistance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
+--
+-- AUTO_INCREMENT for table `store_courier_settings`
+--
 ALTER TABLE `store_courier_settings`
   MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
+--
+-- AUTO_INCREMENT for table `store_courier_weight_rates`
+--
 ALTER TABLE `store_courier_weight_rates`
   MODIFY `courierWeight_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
+--
+-- AUTO_INCREMENT for table `users`
+--
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
+--
+-- AUTO_INCREMENT for table `user_addresses`
+--
 ALTER TABLE `user_addresses`
   MODIFY `userAddress_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
+--
+-- AUTO_INCREMENT for table `vouchers`
+--
 ALTER TABLE `vouchers`
   MODIFY `voucher_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
+--
+-- AUTO_INCREMENT for table `voucher_products`
+--
 ALTER TABLE `voucher_products`
   MODIFY `voucher_product_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT for table `voucher_usages`
+--
 ALTER TABLE `voucher_usages`
   MODIFY `usage_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
--- ----------------------------
--- Foreign Keys
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `cart_items`
+--
 ALTER TABLE `cart_items`
   ADD CONSTRAINT `fk_ci_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`cart_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_ci_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
 
+--
+-- Constraints for table `cart_shipping_selections`
+--
 ALTER TABLE `cart_shipping_selections`
   ADD CONSTRAINT `fk_css_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`cart_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `cart_vouchers`
+--
 ALTER TABLE `cart_vouchers`
   ADD CONSTRAINT `fk_cv_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE SET NULL;
 
+--
+-- Constraints for table `categories`
+--
 ALTER TABLE `categories`
   ADD CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`category_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Constraints for table `courier_services`
+--
 ALTER TABLE `courier_services`
   ADD CONSTRAINT `fk_service_courier` FOREIGN KEY (`courier_id`) REFERENCES `couriers` (`courier_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `orders`
+--
+ALTER TABLE `orders`
+  ADD CONSTRAINT `fk_orders_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`),
+  ADD CONSTRAINT `fk_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `fk_orders_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`);
+
+--
+-- Constraints for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `fk_oi_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_oi_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
+
+--
+-- Constraints for table `order_shipping`
+--
+ALTER TABLE `order_shipping`
+  ADD CONSTRAINT `fk_os_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `products`
+--
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `products_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON UPDATE CASCADE;
 
+--
+-- Constraints for table `product_images`
+--
 ALTER TABLE `product_images`
   ADD CONSTRAINT `product_images_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+--
+-- Constraints for table `product_options`
+--
+ALTER TABLE `product_options`
+  ADD CONSTRAINT `product_options_ibfk_1` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `product_option_values`
+--
+ALTER TABLE `product_option_values`
+  ADD CONSTRAINT `product_option_values_ibfk_1` FOREIGN KEY (`option_id`) REFERENCES `product_options` (`option_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `product_promotions`
+--
 ALTER TABLE `product_promotions`
   ADD CONSTRAINT `fk_pp_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_pp_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `product_skus`
+--
 ALTER TABLE `product_skus`
   ADD CONSTRAINT `fk_ps_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `product_sku_options`
+--
 ALTER TABLE `product_sku_options`
   ADD CONSTRAINT `fk_pso_option` FOREIGN KEY (`option_id`) REFERENCES `product_variant_attribute_options` (`option_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_pso_sku` FOREIGN KEY (`product_sku_id`) REFERENCES `product_skus` (`product_sku_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `product_variant_attributes`
+--
 ALTER TABLE `product_variant_attributes`
   ADD CONSTRAINT `fk_pva_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `product_variant_attribute_options`
+--
 ALTER TABLE `product_variant_attribute_options`
   ADD CONSTRAINT `fk_pvao_attribute` FOREIGN KEY (`attribute_id`) REFERENCES `product_variant_attributes` (`attribute_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `property_specs`
+--
 ALTER TABLE `property_specs`
   ADD CONSTRAINT `fk_property_specs_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `reply_templates`
+--
+ALTER TABLE `reply_templates`
+  ADD CONSTRAINT `reply_templates_ibfk_1` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `stores`
+--
 ALTER TABLE `stores`
   ADD CONSTRAINT `stores_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
 
+--
+-- Constraints for table `store_about_pages`
+--
+ALTER TABLE `store_about_pages`
+  ADD CONSTRAINT `fk_about_page_to_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `store_courier_distance_rates`
+--
 ALTER TABLE `store_courier_distance_rates`
   ADD CONSTRAINT `fk_courier_setting_distance` FOREIGN KEY (`setting_id`) REFERENCES `store_courier_settings` (`setting_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `store_courier_settings`
+--
 ALTER TABLE `store_courier_settings`
   ADD CONSTRAINT `fk_store_courier_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+--
+-- Constraints for table `store_courier_weight_rates`
+--
 ALTER TABLE `store_courier_weight_rates`
   ADD CONSTRAINT `fk_courier_setting_weight` FOREIGN KEY (`setting_id`) REFERENCES `store_courier_settings` (`setting_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `store_selected_services`
+--
 ALTER TABLE `store_selected_services`
   ADD CONSTRAINT `fk_selected_service` FOREIGN KEY (`service_id`) REFERENCES `courier_services` (`service_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_selected_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+--
+-- Constraints for table `user_addresses`
+--
 ALTER TABLE `user_addresses`
   ADD CONSTRAINT `user_addresses_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
 
+--
+-- Constraints for table `vehicle_mobil_specs`
+--
 ALTER TABLE `vehicle_mobil_specs`
   ADD CONSTRAINT `fk_vhcs_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `vehicle_motor_specs`
+--
 ALTER TABLE `vehicle_motor_specs`
   ADD CONSTRAINT `fk_vms_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `vouchers`
+--
 ALTER TABLE `vouchers`
   ADD CONSTRAINT `fk_v_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `voucher_products`
+--
 ALTER TABLE `voucher_products`
   ADD CONSTRAINT `fk_vp_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_vp_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE CASCADE;
 
+--
+-- Constraints for table `voucher_usages`
+--
 ALTER TABLE `voucher_usages`
   ADD CONSTRAINT `fk_vu_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE CASCADE;
-
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
-
-
