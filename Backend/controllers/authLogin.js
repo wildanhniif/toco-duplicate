@@ -19,7 +19,7 @@ const login = async (req, res) => {
     }
 
     const user = users[0];
-    let store_Id = null; // Default storeId adalah null
+    let store_id = null; // Default storeId adalah null
 
     // Cek jika user adalah seller, dan HANYA JIKA seller, cari storeId-nya.
     if (user.role === "seller") {
@@ -28,7 +28,7 @@ const login = async (req, res) => {
         [user.user_id]
       );
       if (stores.length > 0) {
-        store_Id = stores[0].store_id;
+        store_id = stores[0].store_id;
       }
     }
 
@@ -52,7 +52,7 @@ const login = async (req, res) => {
       user_id: user.user_id,
       name: user.full_name, // Fix: gunakan full_name bukan name
       role: user.role,
-      storeId: store_Id, // <-- 'i' kecil, sekarang konsisten!
+      store_id: store_id, // <-- konsisten dengan database
     };
 
     // Buat dan kirim token

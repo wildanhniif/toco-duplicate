@@ -9,28 +9,26 @@ require('dotenv').config();
 const protect = (req, res, next) => {
     let token;
 
-    // 1. Cek apakah ada header 'Authorization' dan dimulai dengan 'Bearer'
+    // Cek apakah ada header 'Authorization' dan dimulai dengan 'Bearer'
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
-            // 2. Ambil token dari header (Contoh: "Bearer eyJhbGci...")
+            // Ambil token dari header
             token = req.headers.authorization.split(' ')[1];
 
-            // 3. Verifikasi token menggunakan secret key
+            // Verifikasi token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-            // 4. Tambahkan payload (data user) dari token ke objek `req`
-            // Ini akan membuat data user tersedia di semua rute yang diproteksi
+            
+            // Tambahkan payload ke req.user
             req.user = decoded;
 
-            // 5. Lanjutkan ke controller berikutnya
+            // Lanjutkan ke controller berikutnya
             next();
         } catch (error) {
             console.error(error);
             res.status(401).json({ message: 'Not authorized, token failed' });
         }
-    }
-
-    if (!token) {
+    } else {
+        // Jika tidak ada token
         res.status(401).json({ message: 'Not authorized, no token' });
     }
 };

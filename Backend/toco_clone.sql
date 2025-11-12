@@ -27,6 +27,8 @@ SET time_zone = "+00:00";
 -- Table structure for table `carts`
 --
 
+USE toco_clone;
+
 CREATE TABLE `carts` (
   `cart_id` bigint(20) UNSIGNED NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -379,60 +381,8 @@ CREATE TABLE `product_images` (
 --
 
 INSERT INTO `product_images` (`image_id`, `product_id`, `url`, `alt_text`, `sort_order`) VALUES
-(1, 4, 'https://www.google.com/imgres?q=sample%20image&imgurl=https%3A%2F%2Fthumbs.dreamstime.com%2Fb%2Fsample-jpeg-fluffy-white-pomeranian-puppy-sits-looks-camera-colorful-balls-front-364720569.jpg&imgrefurl=https%3A%2F%2Fwww.dreamstime.com%2Fphotos-images%2Fsam', NULL, 0),
-(2, 4, 'https://www.google.com/imgres?q=sample%20image&imgurl=https%3A%2F%2Fcdn.pixabay.com%2Fphoto%2F2022%2F01%2F28%2F18%2F32%2Fleaves-6975462_1280.png&imgrefurl=https%3A%2F%2Fpixabay.com%2Fimages%2Fsearch%2Fsample%2F&docid=2xXLFxhaENkZgM&tbnid=wq_9Tnp_-uy-cM&ve', NULL, 1);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `product_options`
---
-
-CREATE TABLE `product_options` (
-  `option_id` int(10) UNSIGNED NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `store_id` int(10) UNSIGNED DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `product_options`
---
-
-INSERT INTO `product_options` (`option_id`, `name`, `store_id`) VALUES
-(3, 'Penyimpanan', NULL),
-(2, 'Ukuran', NULL),
-(1, 'Warna', NULL);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `product_option_values`
---
-
-CREATE TABLE `product_option_values` (
-  `value_id` int(10) UNSIGNED NOT NULL,
-  `option_id` int(10) UNSIGNED NOT NULL,
-  `value` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `product_option_values`
---
-
-INSERT INTO `product_option_values` (`value_id`, `option_id`, `value`) VALUES
-(1, 1, 'Hitam'),
-(2, 1, 'Putih'),
-(3, 1, 'Merah Maroon'),
-(4, 1, 'Biru Navy'),
-(5, 2, 'S'),
-(6, 2, 'M'),
-(7, 2, 'L'),
-(8, 2, 'XL'),
-(9, 3, '128GB'),
-(10, 3, '256GB'),
-(11, 3, '512GB');
-
--- --------------------------------------------------------
+(1, 4, 'https://images.unsplash.com/photo-1521579776937-6c1c4d4fabe1?auto=format&fit=crop&w=800&q=80', 'Sepatu lari GO-FAST', 0),
+(2, 4, 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80', 'Detail sol sepatu', 1);
 
 --
 -- Table structure for table `product_promotions`
@@ -603,7 +553,6 @@ CREATE TABLE `stores` (
   `background_image_url` varchar(255) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `business_phone` varchar(20) DEFAULT NULL,
-  `show_business_phone` tinyint(1) DEFAULT 0,
   `address_detail` text DEFAULT NULL,
   `postal_code` varchar(10) DEFAULT NULL,
   `province_id` varchar(10) DEFAULT NULL,
@@ -630,9 +579,9 @@ CREATE TABLE `stores` (
 -- Dumping data for table `stores`
 --
 
-INSERT INTO `stores` (`store_id`, `user_id`, `name`, `slug`, `profile_image_url`, `background_image_url`, `description`, `business_phone`, `show_business_phone`, `address_detail`, `postal_code`, `province_id`, `city_id`, `district_id`, `sub_district_id`, `province`, `city`, `district`, `sub_district`, `latitude`, `longitude`, `use_cloudflare`, `is_active`, `created_at`, `updated_at`, `is_on_holiday`, `holiday_start_date`, `holiday_end_date`, `show_phone_number`) VALUES
-(2, 6, 'Toko bahan kue', 'toko-bahan-kue', NULL, NULL, 'Menyediakan bahan bahan kue', '081274967462', 0, 'Gedung Jaya Plaza Lt. 2 Blok A No. 15', '40211', '32', '32.73', '32.73.16', '32.73.16.1', 'Jawa Barat', 'Kota Bandung', 'Astanaanyar', 'Karanganyar', -6.92837500, 107.60195300, 0, 1, '2025-10-28 14:51:35', '2025-10-28 15:02:40', 0, NULL, NULL, 0),
-(5, 8, 'Suskes Selalu', 'suskes-selalu', '/uploads/stores/profile_image-undefined-1761896264906.jpg', '/uploads/stores/background_image-undefined-1761896264952.jpg', 'Update Deskripsi', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 1, '2025-10-31 07:34:48', '2025-10-31 07:37:44', 0, NULL, NULL, 0);
+INSERT INTO `stores` (`store_id`, `user_id`, `name`, `slug`, `profile_image_url`, `background_image_url`, `description`, `business_phone`, `address_detail`, `postal_code`, `province_id`, `city_id`, `district_id`, `sub_district_id`, `province`, `city`, `district`, `sub_district`, `latitude`, `longitude`, `use_cloudflare`, `is_active`, `created_at`, `updated_at`, `is_on_holiday`, `holiday_start_date`, `holiday_end_date`, `show_phone_number`) VALUES
+(2, 6, 'Toko bahan kue', 'toko-bahan-kue', NULL, NULL, 'Menyediakan bahan bahan kue', '081274967462', 'Gedung Jaya Plaza Lt. 2 Blok A No. 15', '40211', '32', '32.73', '32.73.16', '32.73.16.1', 'Jawa Barat', 'Kota Bandung', 'Astanaanyar', 'Karanganyar', -6.92837500, 107.60195300, 0, 1, '2025-10-28 14:51:35', '2025-10-28 15:02:40', 0, NULL, NULL, 0),
+(5, 8, 'Suskes Selalu', 'suskes-selalu', '/uploads/stores/profile_image-undefined-1761896264906.jpg', '/uploads/stores/background_image-undefined-1761896264952.jpg', 'Update Deskripsi', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 1, '2025-10-31 07:34:48', '2025-10-31 07:37:44', 0, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -672,10 +621,8 @@ INSERT INTO `store_courier_distance_rates` (`courierDistance_id`, `setting_id`, 
 (10, 2, 0.00, 5.00, 10000),
 (11, 2, 5.01, 10.00, 15000),
 (12, 2, 10.01, 25.00, 25000),
-(17, 2, 0.00, 5.00, 10000),
-(18, 2, 5.01, 10.00, 15000),
-(19, 2, 10.01, 30.00, 25000),
-(20, 2, 30.01, 1000.00, 50000);
+(13, 2, 25.01, 30.00, 25000),
+(14, 2, 30.01, 1000.00, 50000);
 
 -- --------------------------------------------------------
 
@@ -1034,19 +981,6 @@ ALTER TABLE `product_images`
   ADD KEY `product_id` (`product_id`);
 
 --
--- Indexes for table `product_options`
---
-ALTER TABLE `product_options`
-  ADD PRIMARY KEY (`option_id`),
-  ADD UNIQUE KEY `store_option_name_unique` (`store_id`,`name`);
-
---
--- Indexes for table `product_option_values`
---
-ALTER TABLE `product_option_values`
-  ADD PRIMARY KEY (`value_id`),
-  ADD KEY `option_id` (`option_id`);
-
 --
 -- Indexes for table `product_promotions`
 --
@@ -1112,13 +1046,14 @@ ALTER TABLE `stores`
 --
 ALTER TABLE `store_about_pages`
   ADD PRIMARY KEY (`about_id`),
-  ADD KEY `fk_about_page_to_store` (`store_id`);
+  ADD UNIQUE KEY `uniq_store_about` (`store_id`);
 
 --
 -- Indexes for table `store_courier_distance_rates`
 --
 ALTER TABLE `store_courier_distance_rates`
   ADD PRIMARY KEY (`courierDistance_id`),
+  ADD UNIQUE KEY `uniq_setting_distance_range` (`setting_id`,`from_km`,`to_km`),
   ADD KEY `fk_courier_setting_distance` (`setting_id`);
 
 --
@@ -1192,6 +1127,7 @@ ALTER TABLE `voucher_products`
 --
 ALTER TABLE `voucher_usages`
   ADD PRIMARY KEY (`usage_id`),
+  ADD UNIQUE KEY `uniq_voucher_order` (`voucher_id`,`order_id`),
   ADD KEY `idx_vu_voucher` (`voucher_id`),
   ADD KEY `idx_vu_user` (`user_id`);
 
@@ -1266,17 +1202,6 @@ ALTER TABLE `product_images`
   MODIFY `image_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `product_options`
---
-ALTER TABLE `product_options`
-  MODIFY `option_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT for table `product_option_values`
---
-ALTER TABLE `product_option_values`
-  MODIFY `value_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
 --
 -- AUTO_INCREMENT for table `product_promotions`
 --
@@ -1329,7 +1254,7 @@ ALTER TABLE `store_about_pages`
 -- AUTO_INCREMENT for table `store_courier_distance_rates`
 --
 ALTER TABLE `store_courier_distance_rates`
-  MODIFY `courierDistance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `courierDistance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `store_courier_settings`
@@ -1443,17 +1368,6 @@ ALTER TABLE `product_images`
   ADD CONSTRAINT `product_images_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Constraints for table `product_options`
---
-ALTER TABLE `product_options`
-  ADD CONSTRAINT `product_options_ibfk_1` FOREIGN KEY (`store_id`) REFERENCES `stores` (`store_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `product_option_values`
---
-ALTER TABLE `product_option_values`
-  ADD CONSTRAINT `product_option_values_ibfk_1` FOREIGN KEY (`option_id`) REFERENCES `product_options` (`option_id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
 --
 -- Constraints for table `product_promotions`
 --

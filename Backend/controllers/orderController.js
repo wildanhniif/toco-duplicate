@@ -222,6 +222,19 @@ exports.createOrder = async (req, res) => {
         }
       }
 
+      // Catat penggunaan voucher (jika ada)
+      if (cart.voucher && cart.voucher.voucher_id) {
+        try {
+          await conn.query(
+            `INSERT INTO voucher_usages (voucher_id, user_id, order_id)
+             VALUES (?, ?, ?)`,
+            [cart.voucher.voucher_id, userId, orderId]
+          );
+        } catch (err) {
+          if (err.code !== "ER_DUP_ENTRY") throw err;
+        }
+      }
+
       // Log status
       await conn.query(
         `INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, note)

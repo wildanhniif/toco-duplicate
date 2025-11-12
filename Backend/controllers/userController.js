@@ -11,7 +11,7 @@ const getUserProfile = async (req, res) => {
 
         // Ambil data terbaru dari database (tanpa password)
         const [users] = await pool.query(
-            "SELECT id, full_name, email, phone_number, created_at FROM users WHERE id = ?",
+            "SELECT user_id AS id, full_name, email, phone_number, created_at FROM users WHERE user_id = ?",
             [userId]
         );
 

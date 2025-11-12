@@ -8,28 +8,8 @@ Dari skema database `toco_clone.sql`, ditemukan beberapa tabel yang **tidak terh
 
 ## ❌ Tabel yang Tidak Terhubung / Tidak Berguna
 
-### 1. **`product_options`** dan **`product_option_values`**
-
-**Status:** ⚠️ **Hampir Tidak Terpakai**
-
-**Masalah:**
-
-- Tabel ini hanya digunakan untuk **READ** di `routes/optionsRoutes.js` (endpoint `/api/options`)
-- **TIDAK digunakan** saat membuat atau mengupdate produk
-- Sistem produk menggunakan sistem variant yang berbeda: `product_variant_attributes` dan `product_variant_attribute_options`
-
-**Bukti:**
-
-- Di `productController.js`, saat create product, sistem menggunakan:
-  - `product_variant_attributes` (untuk nama atribut seperti "Color", "Size")
-  - `product_variant_attribute_options` (untuk nilai seperti "Black", "M")
-- Tabel `product_options` dan `product_option_values` hanya dibaca untuk referensi, tapi tidak di-insert saat create product
-
-**Rekomendasi:**
-
-- **Opsi 1:** Hapus tabel ini jika memang tidak diperlukan
-- **Opsi 2:** Integrasikan dengan sistem variant yang ada, atau
-- **Opsi 3:** Gunakan sebagai "master data" untuk dropdown options (jika memang diperlukan untuk UI)
+Saat ini **tidak ada tabel redundant aktif**.  
+`product_options` dan `product_option_values` beserta endpoint `/api/options` telah dihapus dari schema dan kode (Nov 2025) karena fungsinya tumpang tindih dengan sistem varian (`product_variant_*`, `product_skus`).
 
 ---
 
@@ -37,34 +17,11 @@ Dari skema database `toco_clone.sql`, ditemukan beberapa tabel yang **tidak terh
 
 ### 2. **`voucher_usages`**
 
-**Status:** ⚠️ **Tracking Tidak Lengkap**
+**Status:** ✅ **Tracking aktif (update Nov 2025)**
 
-**Masalah:**
-
-- Tabel ini hanya digunakan untuk **COUNT** (menghitung berapa kali voucher digunakan)
-- **TIDAK ada INSERT** saat order dibuat dengan voucher
-- Di `orderController.js` saat create order, tidak ada insert ke `voucher_usages`
-- Hanya digunakan di `voucherSellerController.js` untuk menampilkan usage count
-
-**Dampak:**
-
-- Tidak bisa track history penggunaan voucher per user
-- Tidak bisa validasi `usage_limit_per_user` dengan benar
-- Data usage count tidak akurat
-
-**Rekomendasi:**
-Tambahkan INSERT ke `voucher_usages` di `orderController.js` saat order berhasil dibuat dengan voucher:
-
-```javascript
-// Setelah order berhasil dibuat dan voucher digunakan
-if (cart.voucher && cart.voucher.voucher_id) {
-  await conn.query(
-    `INSERT INTO voucher_usages (voucher_id, user_id, order_id) 
-     VALUES (?, ?, ?)`,
-    [cart.voucher.voucher_id, userId, orderId]
-  );
-}
-```
+- `orderController` kini menyimpan baris ke `voucher_usages` setiap kali checkout menggunakan voucher.
+- Diberlakukan indeks unik `uniq_voucher_order` (`voucher_id`,`order_id`) untuk mencegah duplikasi pemakaian dalam transaksi yang sama.
+- Data ini digunakan `voucherSellerController` untuk menghitung usage counter secara konsisten.
 
 ---
 
@@ -110,7 +67,7 @@ Berikut adalah daftar tabel yang **terhubung dengan routes/controllers**:
 
 - ✅ `vouchers` - voucherSellerController, cartController
 - ✅ `voucher_products` - voucherSellerController
-- ⚠️ `voucher_usages` - **Hanya untuk COUNT, tidak ada INSERT**
+- ✅ `voucher_usages` - orderController, voucherSellerController
 
 ### Shipping Tables
 
@@ -130,37 +87,14 @@ Berikut adalah daftar tabel yang **terhubung dengan routes/controllers**:
 
 ## 📋 Kesimpulan
 
-### Tabel yang Bisa Dihapus (Jika Tidak Diperlukan):
-
-1. **`product_options`** - Hanya untuk read, tidak digunakan saat create product
-2. **`product_option_values`** - Hanya untuk read, tidak digunakan saat create product
-
-### Fitur yang Perlu Dilengkapi:
-
-1. **`voucher_usages`** - Perlu ditambahkan INSERT saat order dibuat dengan voucher
-
-### Tabel yang Perlu Dipertimbangkan:
-
-- `product_options` dan `product_option_values` bisa dipertahankan jika:
-  - Akan digunakan sebagai "master data" untuk dropdown di frontend
-  - Akan diintegrasikan dengan sistem variant yang ada
-  - Akan digunakan untuk fitur pencarian/filter produk berdasarkan option
+- Seluruh tabel aktif sudah terhubung ke controller yang relevan.
+- Tracking penggunaan voucher kini tersinkron otomatis dan bebas duplikasi.
 
 ---
 
 ## 🔧 Action Items
 
-1. **Evaluasi `product_options` dan `product_option_values`**
-
-   - Tentukan apakah akan digunakan atau dihapus
-   - Jika akan digunakan, integrasikan dengan sistem variant
-
-2. **Perbaiki tracking `voucher_usages`**
-
-   - Tambahkan INSERT di `orderController.js` saat order dibuat dengan voucher
-   - Pastikan validasi `usage_limit_per_user` bekerja dengan benar
-
-3. **Review Foreign Key Constraints**
+1. **Review Foreign Key Constraints**
    - Pastikan semua foreign key masih relevan
    - Hapus constraint yang tidak diperlukan jika tabel dihapus
 
@@ -203,7 +137,6 @@ Berikut adalah penjelasan fungsi setiap atribut pada tabel-tabel yang **berguna 
 | `background_image_url`                                     | varchar(255)                 | URL gambar latar belakang toko           |
 | `description`                                              | text                         | Deskripsi toko                           |
 | `business_phone`                                           | varchar(20)                  | Nomor telepon bisnis toko                |
-| `show_business_phone`                                      | tinyint(1)                   | Tampilkan nomor telepon di halaman toko? |
 | `address_detail`                                           | text                         | Detail alamat toko                       |
 | `postal_code`                                              | varchar(10)                  | Kode pos                                 |
 | `province_id`, `city_id`, `district_id`, `sub_district_id` | varchar(10)                  | ID wilayah (untuk integrasi API wilayah) |
@@ -213,7 +146,7 @@ Berikut adalah penjelasan fungsi setiap atribut pada tabel-tabel yang **berguna 
 | `is_active`                                                | tinyint(1)                   | Status aktif toko (0=nonaktif, 1=aktif)  |
 | `is_on_holiday`                                            | tinyint(1)                   | Mode libur aktif?                        |
 | `holiday_start_date`, `holiday_end_date`                   | date                         | Tanggal mulai dan akhir libur            |
-| `show_phone_number`                                        | tinyint(1)                   | Tampilkan nomor telepon di produk?       |
+| `show_phone_number`                                        | tinyint(1)                   | Tampilkan nomor telepon toko?            |
 | `created_at`, `updated_at`                                 | timestamp                    | Waktu pembuatan dan update               |
 
 #### **`products`**
@@ -401,7 +334,7 @@ Berikut adalah penjelasan fungsi setiap atribut pada tabel-tabel yang **berguna 
 | ------------ | ---------------------- | ----------------------------------------- |
 | `image_id`   | bigint(20) UNSIGNED PK | ID unik gambar                            |
 | `product_id` | bigint(20) UNSIGNED FK | ID produk                                 |
-| `url`        | varchar(255)           | URL gambar                                |
+| `url`        | varchar(255)           | URL gambar (gunakan host yang valid)      |
 | `alt_text`   | varchar(255)           | Teks alternatif untuk aksesibilitas       |
 | `sort_order` | smallint(5) UNSIGNED   | Urutan tampilan gambar (0 = gambar utama) |
 
@@ -552,17 +485,17 @@ Berikut adalah penjelasan fungsi setiap atribut pada tabel-tabel yang **berguna 
 
 **Fungsi:** Menentukan produk mana saja yang bisa pakai voucher (jika `applicable_to = 'specific_products'`).
 
-#### **`voucher_usages`** ⚠️
+#### **`voucher_usages`**
 
-| Atribut      | Tipe                   | Fungsi                            |
-| ------------ | ---------------------- | --------------------------------- |
-| `usage_id`   | bigint(20) UNSIGNED PK | ID unik penggunaan                |
-| `voucher_id` | bigint(20) UNSIGNED FK | ID voucher                        |
-| `user_id`    | int(11) FK             | ID user yang menggunakan          |
-| `order_id`   | bigint(20) UNSIGNED FK | ID order yang menggunakan voucher |
-| `used_at`    | timestamp              | Waktu penggunaan                  |
+| Atribut      | Tipe                   | Fungsi                                                     |
+| ------------ | ---------------------- | ---------------------------------------------------------- |
+| `usage_id`   | bigint(20) UNSIGNED PK | ID unik penggunaan                                         |
+| `voucher_id` | bigint(20) UNSIGNED FK | ID voucher                                                 |
+| `user_id`    | int(11) FK             | ID user yang menggunakan                                   |
+| `order_id`   | bigint(20) UNSIGNED FK | ID order yang menggunakan voucher (unik per voucher/order) |
+| `used_at`    | timestamp              | Waktu penggunaan                                           |
 
-**Catatan:** Tabel ini hanya digunakan untuk COUNT, belum ada INSERT saat order dibuat. Perlu diperbaiki!
+**Catatan:** Diisi otomatis saat checkout; constraint `uniq_voucher_order` mencegah duplikasi.
 
 ---
 
@@ -619,6 +552,7 @@ Berikut adalah penjelasan fungsi setiap atribut pada tabel-tabel yang **berguna 
 | `price`              | int(11)       | Harga ongkir untuk range jarak ini |
 
 **Contoh:** 0-5 km = 10.000, 5.01-10 km = 15.000, dst.
+**Catatan:** Range jarak per `setting_id` bersifat unik (constraint `uniq_setting_distance_range`).
 
 #### **`store_courier_weight_rates`**
 
@@ -637,14 +571,15 @@ Berikut adalah penjelasan fungsi setiap atribut pada tabel-tabel yang **berguna 
 
 #### **`store_about_pages`**
 
-| Atribut                    | Tipe                   | Fungsi                       |
-| -------------------------- | ---------------------- | ---------------------------- |
-| `about_id`                 | bigint(20) UNSIGNED PK | ID unik halaman              |
-| `store_id`                 | int(10) UNSIGNED FK    | ID toko                      |
-| `title`                    | varchar(255)           | Judul halaman "Tentang Toko" |
-| `thumbnail_url`            | varchar(255)           | URL thumbnail halaman        |
-| `content`                  | text                   | Konten halaman (HTML)        |
-| `created_at`, `updated_at` | timestamp              | Waktu pembuatan dan update   |
+| Atribut                    | Tipe                   | Fungsi                                                      |
+| -------------------------- | ---------------------- | ----------------------------------------------------------- |
+| `about_id`                 | bigint(20) UNSIGNED PK | ID unik halaman                                             |
+| `store_id`                 | int(10) UNSIGNED FK    | ID toko                                                     |
+| `title`                    | varchar(255)           | Judul halaman "Tentang Toko"                                |
+| `thumbnail_url`            | varchar(255)           | URL thumbnail halaman                                       |
+| `content`                  | text                   | Konten halaman (HTML)                                       |
+| `created_at`, `updated_at` | timestamp              | Waktu pembuatan dan update                                  |
+| **Catatan**                | —                      | Satu toko hanya boleh punya satu baris (`uniq_store_about`) |
 
 #### **`reply_templates`**
 

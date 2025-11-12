@@ -42,7 +42,7 @@ exports.createVoucher = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const userId = req.user.user_id || req.user.id;
+    const userId = req.user.user_id;
 
     // Ambil store_id seller
     const [storeRows] = await conn.query(
@@ -339,7 +339,7 @@ exports.createVoucher = async (req, res) => {
  */
 exports.getMyVouchers = async (req, res) => {
   try {
-    const userId = req.user.user_id || req.user.id;
+    const userId = req.user.user_id;
 
     // Ambil store_id seller
     const [storeRows] = await db.query(
@@ -528,7 +528,7 @@ exports.getMyVouchers = async (req, res) => {
  */
 exports.getVoucherById = async (req, res) => {
   try {
-    const userId = req.user.user_id || req.user.id;
+    const userId = req.user.user_id;
     const { id } = req.params;
 
     // Ambil store_id seller
@@ -597,7 +597,7 @@ exports.duplicateVoucher = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const userId = req.user.user_id || req.user.id;
+    const userId = req.user.user_id;
     const { id } = req.params;
 
     // Ambil store_id seller
@@ -708,7 +708,7 @@ exports.duplicateVoucher = async (req, res) => {
  */
 exports.endVoucher = async (req, res) => {
   try {
-    const userId = req.user.user_id || req.user.id;
+    const userId = req.user.user_id;
     const { id } = req.params;
 
     // Ambil store_id seller

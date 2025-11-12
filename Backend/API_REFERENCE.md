@@ -3,6 +3,17 @@
 Base URL: `/api`
 Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
 
+## Health Check
+
+- GET `/health` (public) → server status and database connection
+  - 200:
+    {
+    "status": "OK",
+    "timestamp": "2025-11-12T15:30:00.000Z",
+    "database": "connected",
+    "uptime": 3600.5
+    }
+
 ## Auth (/api/auth)
 
 - POST `/register`
@@ -40,7 +51,7 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
   - 200:
     {
     "token": "<JWT>",
-    "user": { "user_id": 8, "name": "Budi Santoso", "role": "seller", "storeId": 5 }
+    "user": { "user_id": 8, "name": "Budi Santoso", "role": "seller", "store_id": 5 }
     }
 
 - GET `/google`
@@ -53,7 +64,7 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
 - GET `/profile` (auth)
   - 200:
     {
-    "id": 8,
+    "user_id": 8,
     "full_name": "Budi Santoso",
     "email": "budi@example.com",
     "phone_number": "081234567890",
@@ -78,7 +89,7 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
     "city": "KOTA JAKARTA PUSAT",
     "district": "Gambir",
     "sub_district": "Gambir",
-    "is_primary": 1
+    "is_default": 1
     }
   - 201: { "userAddress_id": 2 }
 
@@ -96,6 +107,18 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
 ## Seller (/api/sellers)
 
 - POST `/register` (auth) → jadikan user sebagai seller dan buat toko
+- GET `/stores/me` (auth) → detail toko milik user saat ini
+  - 200:
+    {
+    "store": {
+      "store_id": 5,
+      "name": "Toko Saya",
+      "slug": "toko-saya",
+      "description": "Deskripsi toko",
+      "is_active": true,
+      "created_at": "2025-11-12T10:00:00Z"
+    }
+    }
 - PUT `/stores/me` (auth, multipart)
   - Fields: profile_image, background_image, plus form fields store
   - 200: { "message": "Store updated" }
@@ -155,11 +178,6 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
 - PUT `/:id` → update
 - DELETE `/:id` → delete
 
-## Options (/api/options)
-
-- GET `/` → master options (Warna, Ukuran, ...)
-- GET `/:optionId/values` → option values (Hitam, Putih, ...)
-
 ## Products (/api/products)
 
 - GET `/` → search/browse products (public)
@@ -196,10 +214,10 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
 
 - GET `/my` (auth seller) → list my products
 - PATCH `/bulk/status` (auth)
-  - Body: { "ids": [5,6,7], "status": "inactive" }
+  - Body: { "product_ids": [5,6,7], "status": "inactive" }
 - DELETE `/bulk` (auth)
 
-  - Body: { "ids": [5,6,7] }
+  - Body: { "product_ids": [5,6,7] }
 
 - GET `/meta/form?category_id=5` → dynamic form meta for create/edit product
 

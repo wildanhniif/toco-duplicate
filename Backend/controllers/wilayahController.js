@@ -1,5 +1,6 @@
 // controllers/wilayahController.js
 const axios = require('axios');
+const db = require('../config/database');
 
 const API_KEY = process.env.BINDERBYTE_API_KEY;
 const BASE_URL = 'https://api.binderbyte.com/wilayah';
@@ -8,10 +9,6 @@ const callBinderByteAPI = async (endpoint, res) => {
     try {
         const url = `${BASE_URL}${endpoint}&api_key=${API_KEY}`;
         
-        // --- TAMBAHAN UNTUK DEBUGGING ---
-        console.log(`[DEBUG] Memanggil URL BinderByte: ${url}`);
-        // --------------------------------
-
         const response = await axios.get(url);
         
         if (response.data.code !== "200") {

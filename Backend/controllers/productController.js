@@ -21,7 +21,6 @@ const createProduct = async (req, res) => {
     weight_gram,
     dimensions, // { length, width, height }
     is_preorder,
-    preorder_lead_time_days, // opsional
     use_store_courier,
     insurance, // 'wajib' | 'opsional'
     images, // [url]
@@ -33,7 +32,7 @@ const createProduct = async (req, res) => {
     property_specs,
   } = req.body;
 
-  const store_id = req.user.store_id || req.user.store_Id; // toleransi nama field
+  const store_id = req.user.store_id;
   if (!store_id) {
     return res.status(403).json({ message: "User does not have a store." });
   }
@@ -363,13 +362,7 @@ const getAllProducts = async (req, res) => {
             SELECT p.*,
                    (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image
             FROM products p
-            ${whereSql
-              .replaceAll("status", "p.status")
-              .replaceAll("category_id", "p.category_id")
-              .replaceAll("product_classification", "p.product_classification")
-              .replaceAll("store_id", "p.store_id")
-              .replaceAll("name", "p.name")
-              .replaceAll("slug", "p.slug")}
+            ${whereSql}
             ORDER BY ${orderBy}
             LIMIT ? OFFSET ?`;
     const [products] = await db.query(sql, [
@@ -417,7 +410,7 @@ const getProductById = async (req, res) => {
  */
 const updateProduct = async (req, res) => {
   const { id } = req.params;
-  const store_id = req.user.store_id || req.user.store_Id;
+  const store_id = req.user.store_id;
 
   // Ambil field yang ingin diupdate dari body
   const { name, description, price, stock, status } = req.body;
@@ -575,7 +568,7 @@ const getMyProducts = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   const { id } = req.params;
-  const store_id = req.user.store_id || req.user.store_Id;
+  const store_id = req.user.store_id;
 
   try {
     // Logika keamanan yang sama seperti update diterapkan di sini.
@@ -602,7 +595,7 @@ const deleteProduct = async (req, res) => {
  */
 const addProductImages = async (req, res) => {
   const { id } = req.params;
-  const store_id = req.user.store_id || req.user.store_Id;
+  const store_id = req.user.store_id;
   try {
     // Pastikan produk milik store pemanggil
     const [rows] = await db.query(
@@ -643,7 +636,7 @@ const addProductImages = async (req, res) => {
 const setProductStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'active' | 'inactive'
-  const store_id = req.user.store_id || req.user.store_Id;
+  const store_id = req.user.store_id;
   if (!["active", "inactive"].includes(status)) {
     return res
       .status(400)
