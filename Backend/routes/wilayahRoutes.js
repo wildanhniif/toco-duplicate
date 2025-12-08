@@ -1,18 +1,21 @@
 // routes/wilayahRoutes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const wilayahController = require('../controllers/wilayahController');
+const wilayahController = require("../controllers/wilayahController");
 
 // URL: GET http://localhost:3000/api/wilayah/provinces
-router.get('/provinces', wilayahController.getProvinces);
+router.get("/provinces", wilayahController.getProvinces);
 
 // URL: GET http://localhost:3000/api/wilayah/cities?id_provinsi=32
-router.get('/cities', wilayahController.getCities);
+router.get("/cities", wilayahController.getCities);
 
 // URL: GET http://localhost:3000/api/wilayah/districts?id_kabupaten=32.73
-router.get('/districts', wilayahController.getDistricts);
+router.get("/districts", wilayahController.getDistricts);
 
 // URL: GET http://localhost:3000/api/wilayah/subdistricts?id_kecamatan=32.73.200
-router.get('/subdistricts', wilayahController.getSubDistricts);
+router.get("/subdistricts", wilayahController.getSubDistricts);
+
+// URL: GET http://localhost:3000/api/wilayah/search?q=kiaracondong&limit=30
+router.get("/search", wilayahController.searchWilayah);
 
 module.exports = router;

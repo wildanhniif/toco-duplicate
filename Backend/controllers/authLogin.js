@@ -38,7 +38,7 @@ const login = async (req, res) => {
     }
 
     // Cek kecocokan password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ message: "Password salah." });
     }

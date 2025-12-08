@@ -3,31 +3,34 @@
 const express = require("express");
 const router = express.Router();
 const {
-  createVoucher,
-  getMyVouchers,
+  getVouchers,
   getVoucherById,
+  createVoucher,
+  updateVoucher,
   duplicateVoucher,
   endVoucher,
-} = require("../controllers/voucherSellerController");
+  deleteVoucher,
+  getVoucherStats,
+} = require("../controllers/voucherController");
 
 // Impor middleware proteksi
 const { protect } = require("../middleware/authMiddleware");
 
-// Routes
-// POST /api/vouchers - Create voucher (harus sebelum /:id)
-router.post("/", protect, createVoucher);
+// All routes require authentication
+router.use(protect);
 
-// GET /api/vouchers/my - List voucher seller dengan filter/sort
-router.get("/my", protect, getMyVouchers);
+// Stats (must be before /:id routes)
+router.get("/stats", getVoucherStats);
 
-// POST /api/vouchers/:id/duplicate - Duplicate voucher (harus sebelum /:id)
-router.post("/:id/duplicate", protect, duplicateVoucher);
+// CRUD operations
+router.get("/", getVouchers); // Supports filters: status, search, period, sort, type, target
+router.get("/:id", getVoucherById);
+router.post("/", createVoucher);
+router.put("/:id", updateVoucher);
+router.delete("/:id", deleteVoucher);
 
-// PUT /api/vouchers/:id/end - End voucher (harus sebelum /:id)
-router.put("/:id/end", protect, endVoucher);
-
-// GET /api/vouchers/:id - Get voucher detail
-router.get("/:id", protect, getVoucherById);
+// Special actions
+router.post("/:id/duplicate", duplicateVoucher);
+router.put("/:id/end", endVoucher);
 
 module.exports = router;
-

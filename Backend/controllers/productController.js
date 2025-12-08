@@ -2,6 +2,7 @@
 
 const db = require("../config/database");
 const slugify = require("../utils/slugify");
+const { uploadBufferToCloudinary } = require("../utils/uploadToCloudinary");
 /**
  * @desc    Membuat produk baru
  * @route   POST /api/products
@@ -12,9 +13,9 @@ const createProduct = async (req, res) => {
     name,
     category_id,
     description,
-    product_classification,
+    product_type,
     price,
-    stock,
+    stock_quantity,
     sku,
     condition,
     brand,
@@ -25,7 +26,7 @@ const createProduct = async (req, res) => {
     insurance, // 'wajib' | 'opsional'
     images, // [url]
     variants, // [{ name, options: [] }]
-    skus, // [{ sku_code, price, stock, option_map, weight_gram, dimensions }]
+    skus, // [{ sku_code, price, stock_quantity, option_map, weight_gram, dimensions }]
     // Classified specific (optional depending on category)
     motor_specs,
     mobil_specs,
@@ -42,7 +43,7 @@ const createProduct = async (req, res) => {
       .json({ message: "name dan category_id wajib diisi" });
   }
 
-  const slug = slugify(name, { lower: true, strict: true });
+  const baseSlug = slugify(name, { lower: true, strict: true });
 
   // Helper: tentukan tipe form berdasar kategori
   async function resolveCategoryMeta(conn, categoryId) {
@@ -65,16 +66,50 @@ const createProduct = async (req, res) => {
     return { type: "marketplace" };
   }
 
+  // Helper: generate slug yang unik (untuk menghindari ER_DUP_ENTRY pada uk_products_slug)
+  async function generateUniqueSlug(conn, baseSlug) {
+    const [rows] = await conn.query(
+      "SELECT slug FROM products WHERE slug = ? OR slug LIKE ?",
+      [baseSlug, `${baseSlug}-%`]
+    );
+
+    if (!rows.length) return baseSlug;
+
+    let maxSuffix = 0;
+    for (const row of rows) {
+      const current = row.slug;
+      if (current === baseSlug) {
+        // dasar sudah ada, minimal mulai dari -1
+        if (maxSuffix < 1) maxSuffix = 1;
+        continue;
+      }
+
+      if (current.startsWith(`${baseSlug}-`)) {
+        const suffixStr = current.substring(baseSlug.length + 1);
+        const suffixNum = parseInt(suffixStr, 10);
+        if (!Number.isNaN(suffixNum) && suffixNum > maxSuffix) {
+          maxSuffix = suffixNum;
+        }
+      }
+    }
+
+    const nextSuffix = maxSuffix + 1;
+    return `${baseSlug}-${nextSuffix}`;
+  }
+
   let conn;
   try {
     conn = await db.getConnection();
     await conn.beginTransaction();
 
+    // Pastikan slug unik di tabel products
+    const slug = await generateUniqueSlug(conn, baseSlug);
+
     // Tentukan meta kategori dan validasi khusus
     const catMeta = await resolveCategoryMeta(conn, category_id);
 
     // Atur classification otomatis untuk kategori classified
-    let effectiveClassification = product_classification || "marketplace";
+    let effectiveClassification = product_type || "marketplace";
     if (
       catMeta.type === "motor" ||
       catMeta.type === "mobil" ||
@@ -86,7 +121,7 @@ const createProduct = async (req, res) => {
     // Validasi wajib per tipe
     if (effectiveClassification === "marketplace") {
       if (price == null) throw new Error("PRICE_REQUIRED");
-      if (stock == null) throw new Error("STOCK_REQUIRED");
+      if (stock_quantity == null) throw new Error("STOCK_REQUIRED");
       if (weight_gram == null) throw new Error("WEIGHT_REQUIRED");
     }
     if (catMeta.type === "motor") {
@@ -120,10 +155,11 @@ const createProduct = async (req, res) => {
     // Insert products
     const insertProductSql = `
             INSERT INTO products (
-                store_id, category_id, name, slug, description, product_classification,
-                price, stock, sku, \`condition\`, brand, weight_gram, dimensions,
-                is_preorder, use_store_courier, insurance, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'inactive')
+                store_id, category_id, name, slug, description, product_type,
+                price, stock_quantity, sku, \`condition\`, brand, weight_gram, 
+                length_mm, width_mm, height_mm, is_preorder, preorder_days,
+                min_order_quantity, max_order_quantity, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
     const [productResult] = await conn.query(insertProductSql, [
       store_id,
@@ -131,17 +167,20 @@ const createProduct = async (req, res) => {
       name,
       slug,
       description || null,
-      effectiveClassification,
+      effectiveClassification, // product_type
       price || 0,
-      stock || 0,
+      stock_quantity || 0, // stock_quantity
       sku || null,
       condition || "new",
       brand || null,
       weight_gram || 0,
-      dimensions ? JSON.stringify(dimensions) : null,
+      dimensions ? dimensions.length || null : null, // length_mm
+      dimensions ? dimensions.width || null : null, // width_mm
+      dimensions ? dimensions.height || null : null, // height_mm
       is_preorder ? 1 : 0,
-      use_store_courier ? 1 : 0,
-      insurance || "opsional",
+      is_preorder && preorder_days ? preorder_days : null,
+      1, // min_order_quantity
+      null, // max_order_quantity
     ]);
     const product_id = productResult.insertId;
 
@@ -183,12 +222,12 @@ const createProduct = async (req, res) => {
     if (Array.isArray(skus) && skus.length > 0) {
       for (const s of skus) {
         const [skuRes] = await conn.query(
-          `INSERT INTO product_skus (product_id, sku_code, price, stock, weight_gram, dimensions) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO product_skus (product_id, sku_code, price, stock_quantity, weight_gram, dimensions) VALUES (?, ?, ?, ?, ?, ?)`,
           [
             product_id,
             s.sku_code,
             s.price ?? price ?? 0,
-            s.stock ?? 0,
+            s.stock_quantity ?? 0,
             s.weight_gram ?? weight_gram ?? null,
             s.dimensions ? JSON.stringify(s.dimensions) : null,
           ]
@@ -310,58 +349,71 @@ const getAllProducts = async (req, res) => {
     const {
       q,
       category_id,
-      classification,
+      classification, // Renamed to product_type in query
       store_id,
       status = "active",
       min_price,
       max_price,
+      condition,
       page = 1,
       limit = 20,
       sort = "created_at_desc",
     } = req.query;
 
-    const where = [];
+    const where = ["p.deleted_at IS NULL"];
     const params = [];
     if (status) {
-      where.push("status = ?");
+      where.push("p.status = ?");
       params.push(status);
     }
     if (category_id) {
-      where.push("category_id = ?");
+      where.push("p.category_id = ?");
       params.push(category_id);
     }
     if (classification) {
-      where.push("product_classification = ?");
+      where.push("p.product_type = ?");
       params.push(classification);
     }
     if (store_id) {
-      where.push("store_id = ?");
+      where.push("p.store_id = ?");
       params.push(store_id);
     }
     if (q) {
-      where.push("(name LIKE ? OR slug LIKE ?)");
+      where.push("(p.name LIKE ? OR p.slug LIKE ?)");
       params.push(`%${q}%`, `%${q}%`);
     }
     if (min_price) {
-      where.push("price >= ?");
+      where.push("p.price >= ?");
       params.push(min_price);
     }
     if (max_price) {
-      where.push("price <= ?");
+      where.push("p.price <= ?");
       params.push(max_price);
     }
+    if (condition && ["new", "used"].includes(condition)) {
+      where.push("p.`condition` = ?");
+      params.push(condition);
+    }
 
-    let orderBy = "created_at DESC";
-    if (sort === "price_asc") orderBy = "price ASC";
-    else if (sort === "price_desc") orderBy = "price DESC";
-    else if (sort === "created_at_asc") orderBy = "created_at ASC";
+    let orderBy = "p.created_at DESC";
+    if (sort === "price_asc") orderBy = "p.price ASC";
+    else if (sort === "price_desc") orderBy = "p.price DESC";
+    else if (sort === "created_at_asc") orderBy = "p.created_at ASC";
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const sql = `
-            SELECT p.*,
-                   (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image
+            SELECT 
+              p.*,
+              s.store_id,
+              s.name AS store_name,
+              s.slug AS store_slug,
+              s.city AS store_city,
+              s.rating_average AS store_rating,
+              s.review_count AS store_review_count,
+              (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image
             FROM products p
+            JOIN stores s ON s.store_id = p.store_id
             ${whereSql}
             ORDER BY ${orderBy}
             LIMIT ? OFFSET ?`;
@@ -386,9 +438,21 @@ const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
     const sql = `
-            SELECT p.*,
-            (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image
+            SELECT 
+              p.*,
+              s.store_id,
+              s.name AS store_name,
+              s.slug AS store_slug,
+              s.city AS store_city,
+              s.description AS store_description,
+              s.rating_average AS store_rating,
+              s.review_count AS store_review_count,
+              s.profile_image_url AS store_profile_image_url,
+              s.background_image_url AS store_background_image_url,
+              (SELECT COUNT(*) FROM products p2 WHERE p2.store_id = s.store_id AND p2.deleted_at IS NULL AND p2.status = 'active') AS store_product_count,
+              (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image
             FROM products p
+            JOIN stores s ON s.store_id = p.store_id
             WHERE p.product_id = ? OR p.slug = ?`;
     const [products] = await db.query(sql, [id, id]);
 
@@ -396,7 +460,17 @@ const getProductById = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res.status(200).json(products[0]);
+    const product = products[0];
+
+    // Ambil semua gambar produk untuk gallery thumbnail
+    const [images] = await db.query(
+      "SELECT image_id, url, alt_text, sort_order, is_primary FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, image_id ASC",
+      [product.product_id]
+    );
+
+    product.images = images;
+
+    res.status(200).json(product);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error" });
@@ -413,7 +487,7 @@ const updateProduct = async (req, res) => {
   const store_id = req.user.store_id;
 
   // Ambil field yang ingin diupdate dari body
-  const { name, description, price, stock, status } = req.body;
+  const { name, description, price, stock_quantity, status } = req.body;
 
   try {
     // PERHATIKAN: Query ini sangat aman.
@@ -421,14 +495,14 @@ const updateProduct = async (req, res) => {
     // Ini mencegah user A mengedit produk milik user B.
     const sql = `
             UPDATE products 
-            SET name = ?, description = ?, price = ?, stock = ?, status = ? 
+            SET name = ?, description = ?, price = ?, stock_quantity = ?, status = ? 
             WHERE product_id = ? AND store_id = ?
         `;
     const [result] = await db.query(sql, [
       name,
       description,
       price,
-      stock,
+      stock_quantity,
       status,
       id,
       store_id,
@@ -474,14 +548,24 @@ const getMyProducts = async (req, res) => {
       limit = 20,
     } = req.query;
 
+    console.log("\n=== getMyProducts Debug ===");
+    console.log("User ID:", userId);
+    console.log("User object:", req.user);
+    console.log("Query params:", req.query);
+
     // Ambil store_id seller
     const [rows] = await db.query(
       "SELECT store_id FROM stores WHERE user_id = ? LIMIT 1",
       [userId]
     );
-    if (!rows.length)
+    console.log("Store query result:", rows);
+    if (!rows.length) {
+      console.log("ERROR: User does not have a store");
       return res.status(403).json({ message: "User does not have a store" });
+    }
     const store_id = rows[0].store_id;
+    console.log("Store ID from query:", store_id);
+    console.log("Store ID from token:", req.user.store_id);
 
     const where = [`p.store_id = ?`];
     const params = [store_id];
@@ -500,11 +584,11 @@ const getMyProducts = async (req, res) => {
       params.push(condition);
     }
     if (stock_min) {
-      where.push(`p.stock >= ?`);
+      where.push(`p.stock_quantity >= ?`);
       params.push(stock_min);
     }
     if (stock_max) {
-      where.push(`p.stock <= ?`);
+      where.push(`p.stock_quantity <= ?`);
       params.push(stock_max);
     }
     if (price_min) {
@@ -518,9 +602,9 @@ const getMyProducts = async (req, res) => {
 
     if (status !== "all") {
       if (status === "classified") {
-        where.push(`p.product_classification = 'classified'`);
+        where.push(`p.product_type = 'classified'`);
       } else if (status === "draft") {
-        where.push(`p.status = 'draft'`);
+        where.push(`(p.status = 'draft' OR p.status IS NULL)`);
       } else if (["active", "inactive"].includes(status)) {
         where.push(`p.status = ?`);
         params.push(status);
@@ -546,6 +630,9 @@ const getMyProducts = async (req, res) => {
     const total = countResult[0].total;
 
     // Query untuk products dengan pagination
+    // PENTING: Parameter untuk promotion check (now) harus di awal array
+    const productParams = [now, ...params, parseInt(limit), offset];
+
     const sql = `
       SELECT p.*, 
       (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS image_url,
@@ -556,8 +643,16 @@ const getMyProducts = async (req, res) => {
       ORDER BY ${orderBy}
       LIMIT ? OFFSET ?
     `;
-    params.push(now, parseInt(limit), offset);
-    const [products] = await db.query(sql, params);
+
+    console.log("SQL Query:", sql);
+    console.log("Product Params:", productParams);
+    console.log("WHERE conditions:", where);
+
+    const [products] = await db.query(sql, productParams);
+
+    console.log("Total found:", total);
+    console.log("Products count:", products.length);
+    console.log("Products:", products);
 
     res.json({ products, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (e) {
@@ -589,7 +684,7 @@ const deleteProduct = async (req, res) => {
 };
 
 /**
- * @desc    Tambah gambar produk (via multer upload)
+ * @desc    Tambah gambar produk (via multer upload + Cloudinary)
  * @route   POST /api/products/:id/images
  * @access  Private (pemilik store)
  */
@@ -610,21 +705,33 @@ const addProductImages = async (req, res) => {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "No images uploaded" });
     }
-    // Simpan path file ke DB
-    const values = req.files.map((f, idx) => [
+
+    // Upload all files to Cloudinary from buffer
+    const uploadPromises = req.files.map((file) =>
+      uploadBufferToCloudinary(file.buffer, "products")
+    );
+    const uploadResults = await Promise.all(uploadPromises);
+
+    // Simpan Cloudinary URL ke DB
+    const values = uploadResults.map((result, idx) => [
       id,
-      `/uploads/products/${f.filename}`,
+      result.url,
       null,
       idx,
     ]);
+
     await db.query(
       "INSERT INTO product_images (product_id, url, alt_text, sort_order) VALUES ?",
       [values]
     );
-    res.status(201).json({ message: "Images uploaded" });
+
+    res.status(201).json({
+      message: "Images uploaded to Cloudinary successfully",
+      images: uploadResults,
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    console.error("Error uploading product images:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
@@ -845,8 +952,8 @@ const duplicateProduct = async (req, res) => {
     });
     const [insertResult] = await conn.query(
       `INSERT INTO products (
-        store_id, category_id, name, slug, description, product_classification,
-        price, stock, sku, \`condition\`, brand, weight_gram, dimensions,
+        store_id, category_id, name, slug, description, product_type,
+        price, stock_quantity, sku, \`condition\`, brand, weight_gram, dimensions,
         is_preorder, use_store_courier, insurance, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'inactive')`,
       [
@@ -855,9 +962,9 @@ const duplicateProduct = async (req, res) => {
         `${original.name} (copy)`,
         slug,
         original.description,
-        original.product_classification,
+        original.product_type,
         original.price,
-        original.stock,
+        original.stock_quantity,
         null, // SKU harus unique, jadi null
         original.condition,
         original.brand,
@@ -921,12 +1028,12 @@ const duplicateProduct = async (req, res) => {
     );
     for (const sku of skus) {
       const [skuRes] = await conn.query(
-        "INSERT INTO product_skus (product_id, sku_code, price, stock, weight_gram, dimensions) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO product_skus (product_id, sku_code, price, stock_quantity, weight_gram, dimensions) VALUES (?, ?, ?, ?, ?, ?)",
         [
           newProductId,
           null,
           sku.price,
-          sku.stock,
+          sku.stock_quantity,
           sku.weight_gram,
           sku.dimensions,
         ]
@@ -1065,13 +1172,13 @@ const cancelPromoteProduct = async (req, res) => {
 };
 
 /**
- * @desc    Update cepat harga dan stock per produk
+ * @desc    Update cepat harga dan stock_quantity per produk
  * @route   PATCH /api/products/:id/quick-update
  * @access  Private (seller)
  */
 const quickUpdateProduct = async (req, res) => {
   const { id } = req.params;
-  const { price, stock } = req.body;
+  const { price, stock_quantity } = req.body;
   const userId = req.user.user_id || req.user.id;
 
   try {
@@ -1089,14 +1196,15 @@ const quickUpdateProduct = async (req, res) => {
       updates.push("price = ?");
       values.push(price);
     }
-    if (stock !== undefined) {
-      updates.push("stock = ?");
-      values.push(stock);
+    if (stock_quantity !== undefined) {
+      updates.push("stock_quantity = ?");
+      values.push(stock_quantity);
     }
 
     if (updates.length === 0) {
       return res.status(400).json({
-        message: "Minimal salah satu field (price atau stock) harus diisi",
+        message:
+          "Minimal salah satu field (price atau stock_quantity) harus diisi",
       });
     }
 

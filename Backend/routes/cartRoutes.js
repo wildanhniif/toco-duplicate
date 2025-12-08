@@ -8,6 +8,8 @@ router.get("/", protect, cart.getCart);
 router.post("/items", protect, cart.addItem);
 router.put("/items/:cart_item_id", protect, cart.updateItem);
 router.delete("/items/:cart_item_id", protect, cart.deleteItem);
+router.delete("/items", protect, cart.deleteMultipleItems); // Bulk delete by IDs
+router.delete("/items/selected/all", protect, cart.deleteSelectedItems); // Delete all selected
 router.patch("/select", protect, cart.selectAll);
 router.put("/address", protect, cart.setAddress);
 router.put("/shipping/:store_id", protect, cart.setShipping);

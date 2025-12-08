@@ -19,9 +19,11 @@ const startServer = async () => {
   const authRegisterRoutes = require("./routes/authRegister");
   const authLoginRoutes = require("./routes/authLogin");
   const authGoogle = require("./routes/authGoogle");
+  const debugRoutes = require("./routes/debug");
   const addressRoutes = require("./routes/addressRoutes");
   const wilayahRoutes = require("./routes/wilayahRoutes");
   const sellerRoutes = require("./routes/sellerRoutes");
+  const storeRoutes = require("./routes/storeRoutes");
   const categoryRoutes = require("./routes/categories");
   const productRoutes = require("./routes/productRoutes");
   const cartRoutes = require("./routes/cartRoutes");
@@ -30,29 +32,16 @@ const startServer = async () => {
   const orderRoutes = require("./routes/orderRoutes");
   const shippingRoutes = require("./routes/shippingRoutes");
   const paymentRoutes = require("./routes/paymentRoutes");
+  const uploadRoutes = require("./routes/uploadRoutes");
 
   const app = express();
-
-  // Rate limiting configuration
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: {
-      error: "Too many requests from this IP, please try again later."
-    },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  });
-
-  // Apply rate limiting to all requests
-  app.use(limiter);
 
   // Stricter rate limiting for auth endpoints
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // Limit each IP to 5 auth requests per windowMs
     message: {
-      error: "Too many authentication attempts, please try again later."
+      error: "Too many authentication attempts, please try again later.",
     },
     skipSuccessfulRequests: true,
   });
@@ -65,31 +54,50 @@ const startServer = async () => {
         status: "OK",
         timestamp: new Date().toISOString(),
         database: isConnected ? "connected" : "disconnected",
-        uptime: process.uptime()
+        uptime: process.uptime(),
       });
     } catch (error) {
       res.status(503).json({
         status: "ERROR",
         timestamp: new Date().toISOString(),
         database: "disconnected",
-        error: error.message
+        error: error.message,
       });
     }
   });
 
   // Middleware
-  app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true
-  }));
+  // CORS: super-permissive in development to avoid blocking localhost:3000
+  // NOTE: This can be tightened later for production.
+  app.use(cors());
+
+  // Rate limiting configuration (only strict in production)
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: {
+      error: "Too many requests from this IP, please try again later.",
+    },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+
+  // Apply rate limiting to all requests only in production
+  if (process.env.NODE_ENV === "production") {
+    app.use(limiter);
+  }
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(passport.initialize());
   app.use("/api/users", userRoutes); // <-- Tambahkan ini
   app.use("/api/auth", authLimiter, authRegisterRoutes);
   app.use("/api/auth", authLimiter, authLoginRoutes);
   app.use("/api/auth", authLimiter, authGoogle);
+  app.use("/api/debug", debugRoutes);
   app.use("/api/addresses", addressRoutes);
   app.use("/api/wilayah", wilayahRoutes);
   app.use("/api/sellers", sellerRoutes);
+  app.use("/api/stores", storeRoutes);
   app.use("/api/categories", categoryRoutes);
   app.use("/api/products", productRoutes);
   app.use("/api/cart", cartRoutes);
@@ -98,6 +106,7 @@ const startServer = async () => {
   app.use("/api/orders", orderRoutes);
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/payments", paymentRoutes);
+  app.use("/api/upload", uploadRoutes);
   // Serve static uploads (product/store images)
   app.use("/uploads", express.static("uploads"));
 

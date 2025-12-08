@@ -1,0 +1,64 @@
+⚠️ URGENT: Update Backend/.env File NOW!
+
+Dari info yang kamu kasih:
+cloud_name: delcznts7
+api_key: 792793843838913
+api_secret: <your_api_secret> ← INI MASIH PLACEHOLDER!
+
+🔥 PROBLEM: Upload error 500 karena api_secret belum di-set!
+
+=====================================
+LANGKAH FIX:
+=====================================
+
+1. Buka Cloudinary Dashboard:
+   https://console.cloudinary.com/
+
+2. Login, lalu klik "View API Keys"
+
+3. Copy API Secret (yang di hide dengan *****)
+
+4. Buka file: Backend/.env
+
+5. Update dengan ini:
+
+   CLOUDINARY_CLOUD_NAME=delcznts7
+   CLOUDINARY_API_KEY=792793843838913
+   CLOUDINARY_API_SECRET=PASTE_YOUR_REAL_SECRET_HERE
+
+6. Save file
+
+7. Restart backend server:
+   Ctrl+C (stop)
+   npm run dev (start)
+
+=====================================
+EXAMPLE .env File:
+=====================================
+
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=blibli
+
+# JWT Secret
+JWT_SECRET=your_jwt_secret_here
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=delcznts7
+CLOUDINARY_API_KEY=792793843838913
+CLOUDINARY_API_SECRET=YOUR_ACTUAL_SECRET_HERE_NO_BRACKETS
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+=====================================
+
+⚠️ IMPORTANT:
+- Jangan ada <> brackets di api_secret!
+- Jangan ada spasi di awal/akhir
+- Paste API secret persis seperti di Cloudinary dashboard
+
+After update → Restart backend → Try upload lagi!

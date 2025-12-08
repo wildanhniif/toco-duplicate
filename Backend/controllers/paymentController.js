@@ -22,9 +22,9 @@ exports.initPayment = async (req, res) => {
   try {
     const { base64ServerKey, snapUrl } = getMidtransConfig();
 
-    // Load order & customer
+    // Load order & customer (gunakan order_number di schema sekarang)
     const [orders] = await db.query(
-      `SELECT o.order_id, o.order_code, o.user_id, o.total_amount
+      `SELECT o.order_id, o.order_number, o.user_id, o.total_amount
        FROM orders o
        WHERE o.order_id = ? AND o.user_id = ? LIMIT 1`,
       [order_id, userId]
@@ -33,6 +33,8 @@ exports.initPayment = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
     const order = orders[0];
+    const orderNumber = order.order_number;
+    const grossAmount = Math.round(Number(order.total_amount) || 0);
 
     const [users] = await db.query(
       "SELECT full_name, email, phone_number FROM users WHERE user_id = ? LIMIT 1",
@@ -48,8 +50,8 @@ exports.initPayment = async (req, res) => {
       "http://localhost:3000";
     const payload = {
       transaction_details: {
-        order_id: order.order_code, // must be unique string on Midtrans side
-        gross_amount: Math.round(Number(order.total_amount) || 0),
+        order_id: orderNumber, // must be unique string on Midtrans side
+        gross_amount: grossAmount,
       },
       customer_details: {
         first_name: firstName,
@@ -59,9 +61,9 @@ exports.initPayment = async (req, res) => {
       },
       credit_card: { secure: true },
       callbacks: {
-        finish: `${frontendBase}/checkout/success?order=${order.order_code}`,
-        unfinish: `${frontendBase}/checkout/pending?order=${order.order_code}`,
-        error: `${frontendBase}/checkout/error?order=${order.order_code}`,
+        finish: `${frontendBase}/checkout/success?order=${orderNumber}`,
+        unfinish: `${frontendBase}/checkout/pending?order=${orderNumber}`,
+        error: `${frontendBase}/checkout/error?order=${orderNumber}`,
       },
     };
 
@@ -74,17 +76,55 @@ exports.initPayment = async (req, res) => {
       timeout: 15000,
     });
 
-    // Save provider + reference (snap token) for tracking
-    await db.query(
-      "UPDATE orders SET payment_provider = ?, payment_reference = ? WHERE order_id = ?",
-      ["midtrans", data?.token || null, order.order_id]
+    // Simpan/Update record di tabel payments
+    const [existingPayments] = await db.query(
+      "SELECT payment_id FROM payments WHERE order_id = ? LIMIT 1",
+      [order.order_id]
     );
+
+    const rawResponse = JSON.stringify(data || null);
+
+    if (existingPayments.length > 0) {
+      await db.query(
+        `UPDATE payments
+         SET provider = ?, payment_status = ?, gross_amount = ?, currency = ?,
+             payment_code = ?, redirect_url = ?, raw_response = ?, updated_at = NOW()
+         WHERE payment_id = ?`,
+        [
+          "midtrans",
+          "pending",
+          grossAmount,
+          "IDR",
+          orderNumber,
+          data?.redirect_url || null,
+          rawResponse,
+          existingPayments[0].payment_id,
+        ]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO payments (
+           order_id, payment_code, provider, payment_status, gross_amount,
+           currency, redirect_url, raw_response
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          order.order_id,
+          orderNumber,
+          "midtrans",
+          "pending",
+          grossAmount,
+          "IDR",
+          data?.redirect_url || null,
+          rawResponse,
+        ]
+      );
+    }
 
     return res.json({
       message: "Snap transaction created",
       snap_token: data?.token,
       redirect_url: data?.redirect_url,
-      order_code: order.order_code,
+      order_code: orderNumber,
     });
   } catch (e) {
     console.error(e?.response?.data || e);
@@ -102,19 +142,20 @@ function verifySignatureKey(body, serverKey) {
 }
 
 function mapTransactionToStatuses(transactionStatus, fraudStatus) {
-  // Map Midtrans status to our order/payment status
-  // Ref: https://api-docs.midtrans.com/#transaction-status
+  // Map Midtrans status ke enum status di tabel orders
+  // orders.status: 'pending','payment_pending','paid','processing','shipped','delivered','cancelled','returned'
+  // orders.payment_status: 'unpaid','paid','refunded','partial_refund'
   if (transactionStatus === "capture") {
     if (fraudStatus === "challenge") {
-      return { payment_status: "unpaid", order_status: "pending_unpaid" };
+      return { payment_status: "unpaid", order_status: "payment_pending" };
     }
-    return { payment_status: "paid", order_status: "waiting_confirmation" };
+    return { payment_status: "paid", order_status: "paid" };
   }
   if (transactionStatus === "settlement") {
-    return { payment_status: "paid", order_status: "waiting_confirmation" };
+    return { payment_status: "paid", order_status: "paid" };
   }
   if (transactionStatus === "pending") {
-    return { payment_status: "unpaid", order_status: "pending_unpaid" };
+    return { payment_status: "unpaid", order_status: "payment_pending" };
   }
   if (transactionStatus === "deny" || transactionStatus === "cancel") {
     return { payment_status: "unpaid", order_status: "cancelled" };
@@ -125,7 +166,28 @@ function mapTransactionToStatuses(transactionStatus, fraudStatus) {
   if (transactionStatus === "refund" || transactionStatus === "chargeback") {
     return { payment_status: "refunded", order_status: "cancelled" };
   }
-  return { payment_status: "unpaid", order_status: "pending_unpaid" };
+  return { payment_status: "unpaid", order_status: "pending" };
+}
+
+function mapTransactionToPaymentStatus(transactionStatus) {
+  // Map Midtrans status ke enum payment_status di tabel payments
+  // payments.payment_status: 'pending','processing','success','failed','expired','cancelled','refunded'
+  if (transactionStatus === "capture" || transactionStatus === "settlement") {
+    return "success";
+  }
+  if (transactionStatus === "pending") {
+    return "pending";
+  }
+  if (transactionStatus === "expire") {
+    return "expired";
+  }
+  if (transactionStatus === "deny" || transactionStatus === "cancel") {
+    return "cancelled";
+  }
+  if (transactionStatus === "refund" || transactionStatus === "chargeback") {
+    return "refunded";
+  }
+  return "pending";
 }
 
 exports.notification = async (req, res) => {
@@ -138,7 +200,7 @@ exports.notification = async (req, res) => {
       return res.status(403).json({ message: "Invalid signature" });
     }
     const {
-      order_id: orderCode,
+      order_id: orderNumber,
       transaction_status,
       fraud_status,
       transaction_id,
@@ -150,16 +212,88 @@ exports.notification = async (req, res) => {
       fraud_status
     );
 
+    // Cari order berdasarkan order_number
+    const [orderRows] = await db.query(
+      "SELECT order_id, status FROM orders WHERE order_number = ? LIMIT 1",
+      [orderNumber]
+    );
+
+    if (!orderRows.length) {
+      console.warn("Midtrans notification: order not found for", orderNumber);
+      return res.status(200).json({ message: "Order not found, ignored" });
+    }
+
+    const orderId = orderRows[0].order_id;
+
     await db.query(
       `UPDATE orders
-       SET status = ?, payment_status = ?, payment_provider = ?, payment_reference = ?
-       WHERE order_code = ?`,
+       SET status = ?, payment_status = ?
+       WHERE order_id = ?`,
+      [statusMap.order_status, statusMap.payment_status, orderId]
+    );
+
+    const paymentStatus = mapTransactionToPaymentStatus(transaction_status);
+    const grossAmount = Number(body.gross_amount || 0);
+    const rawResponse = JSON.stringify(body || null);
+
+    const [paymentRows] = await db.query(
+      "SELECT payment_id FROM payments WHERE order_id = ? LIMIT 1",
+      [orderId]
+    );
+
+    if (paymentRows.length) {
+      await db.query(
+        `UPDATE payments
+         SET payment_status = ?, provider = ?, payment_type = ?, gross_amount = ?,
+             currency = ?, transaction_id = ?, transaction_time = ?, raw_response = ?,
+             status_message = ?
+         WHERE payment_id = ?`,
+        [
+          paymentStatus,
+          "midtrans",
+          payment_type || null,
+          grossAmount,
+          "IDR",
+          transaction_id || null,
+          body.transaction_time || null,
+          rawResponse,
+          body.status_message || null,
+          paymentRows[0].payment_id,
+        ]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO payments (
+           order_id, payment_code, provider, payment_type, payment_status,
+           gross_amount, currency, transaction_id, transaction_time,
+           raw_response, status_message
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          orderNumber,
+          "midtrans",
+          payment_type || null,
+          paymentStatus,
+          grossAmount,
+          "IDR",
+          transaction_id || null,
+          body.transaction_time || null,
+          rawResponse,
+          body.status_message || null,
+        ]
+      );
+    }
+
+    // Tambah log status order
+    await db.query(
+      `INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, notes)
+       VALUES (?, ?, ?, ?, ?)`,
       [
+        orderId,
+        orderRows[0].status,
         statusMap.order_status,
-        statusMap.payment_status,
-        "midtrans",
-        transaction_id || payment_type || null,
-        orderCode,
+        "system",
+        `Midtrans status: ${transaction_status}`,
       ]
     );
 

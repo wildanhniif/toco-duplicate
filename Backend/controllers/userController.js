@@ -9,9 +9,12 @@ const getUserProfile = async (req, res) => {
         // ID pengguna diambil dari token yang sudah diverifikasi oleh middleware
         const userId = req.user.user_id;
 
-        // Ambil data terbaru dari database (tanpa password)
+        // Ambil data terbaru dari database (tanpa password_hash, dengan field baru)
         const [users] = await pool.query(
-            "SELECT user_id AS id, full_name, email, phone_number, created_at FROM users WHERE user_id = ?",
+            `SELECT user_id AS id, full_name, email, phone_number, role, is_verified, is_active, 
+                    last_login_at, email_verified_at, created_at, updated_at 
+             FROM users 
+             WHERE user_id = ? AND deleted_at IS NULL`,
             [userId]
         );
 

@@ -10,10 +10,6 @@ router.post('/register', [
     check('email', 'Masukkan email yang valid').isEmail(),
     check('password', 'Password minimal 6 karakter').isLength({ min: 6 }),
 
-    // Validasi baru ditambahkan di sini
-    check('jenisKelamin', 'Jenis kelamin tidak valid').optional().isIn(['Laki-laki', 'Perempuan']),
-    check('tanggalLahir', 'Format tanggal lahir tidak valid (YYYY-MM-DD)').optional().isISO8601().toDate(),
-
 ], register);
 
 router.post('/verify-email', verifyEmail);

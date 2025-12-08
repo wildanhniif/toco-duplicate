@@ -23,13 +23,12 @@ Auth: Bearer JWT on protected endpoints (`Authorization: Bearer <token>`)
     "fullName": "Budi Santoso",
     "phoneNumber": "081234567890",
     "email": "budi@example.com",
-    "password": "secret123",
-    "jenisKelamin": "Laki-laki",
-    "tanggalLahir": "1995-06-10"
+    "password": "secret123"
     }
   - 201:
     {
-    "message": "Registrasi berhasil. Cek email untuk verifikasi."
+    "message": "Registrasi berhasil. Cek email untuk verifikasi.",
+    "user_id": 123
     }
 
 - POST `/verify-email`
@@ -354,3 +353,5 @@ Content-Type: application/json
 Example JWT: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
 
 Static files: `/uploads/...` served publicly.
+
+POST /api/categories/bulk
