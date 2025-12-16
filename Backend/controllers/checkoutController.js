@@ -104,6 +104,78 @@ async function checkStock(items) {
   return errors;
 }
 
+/**
+ * Check and lock stock atomically within a transaction
+ * Uses SELECT FOR UPDATE to prevent race conditions
+ * @param {Object} conn - MySQL connection (must be in transaction)
+ * @param {Array} items - Cart items to check
+ * @returns {Array} Errors if stock insufficient
+ */
+async function checkAndLockStock(conn, items) {
+  const errors = [];
+  
+  for (const it of items) {
+    if (it.sku_id) {
+      // Lock SKU row and check stock
+      const [rows] = await conn.query(
+        "SELECT stock_quantity FROM product_skus WHERE sku_id = ? FOR UPDATE",
+        [it.sku_id]
+      );
+      
+      if (!rows.length) {
+        errors.push({
+          cart_item_id: it.cart_item_id,
+          product_id: it.product_id,
+          reason: "SKU_NOT_FOUND",
+          requested: it.quantity,
+        });
+        continue;
+      }
+      
+      const stock = Number(rows[0].stock_quantity);
+      if (stock < it.quantity) {
+        errors.push({
+          cart_item_id: it.cart_item_id,
+          product_id: it.product_id,
+          sku_id: it.sku_id,
+          reason: "INSUFFICIENT_STOCK_SKU",
+          available: stock,
+          requested: it.quantity,
+        });
+      }
+    } else {
+      // Lock product row and check stock
+      const [rows] = await conn.query(
+        "SELECT stock_quantity FROM products WHERE product_id = ? FOR UPDATE",
+        [it.product_id]
+      );
+      
+      if (!rows.length) {
+        errors.push({
+          cart_item_id: it.cart_item_id,
+          product_id: it.product_id,
+          reason: "PRODUCT_NOT_FOUND",
+          requested: it.quantity,
+        });
+        continue;
+      }
+      
+      const stock = Number(rows[0].stock_quantity);
+      if (stock < it.quantity) {
+        errors.push({
+          cart_item_id: it.cart_item_id,
+          product_id: it.product_id,
+          reason: "INSUFFICIENT_STOCK_PRODUCT",
+          available: stock,
+          requested: it.quantity,
+        });
+      }
+    }
+  }
+  
+  return errors;
+}
+
 exports.getCheckoutSummary = async (req, res) => {
   const userId = req.user.user_id || req.user.id;
   try {
@@ -383,8 +455,8 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: "Shipping address not selected" });
     }
 
-    // Validate stock
-    const stockErrors = await checkStock(items);
+    // Validate stock WITHIN transaction with row locking to prevent race conditions
+    const stockErrors = await checkAndLockStock(conn, items);
     if (stockErrors.length > 0) {
       await conn.rollback();
       return res

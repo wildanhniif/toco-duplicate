@@ -68,21 +68,21 @@ export default function UserProfileDropdown() {
         {/* Order Status Cards */}
         <div className="grid grid-cols-3 gap-2 mb-4">
           <Link
-            href="/orders?status=unpaid"
+            href="/user/orders?status=unpaid"
             className="flex flex-col items-center p-3 border rounded-lg hover:bg-gray-50"
           >
             <Package className="h-6 w-6 mb-1 text-gray-600" />
             <span className="text-xs text-center">Belum Dibayar</span>
           </Link>
           <Link
-            href="/orders?status=ongoing"
+            href="/user/orders?status=ongoing"
             className="flex flex-col items-center p-3 border rounded-lg hover:bg-gray-50"
           >
             <ShoppingBag className="h-6 w-6 mb-1 text-gray-600" />
             <span className="text-xs text-center">Berlangsung</span>
           </Link>
           <Link
-            href="/orders?status=delivered"
+            href="/user/orders?status=delivered"
             className="flex flex-col items-center p-3 border rounded-lg hover:bg-gray-50"
           >
             <MapPin className="h-6 w-6 mb-1 text-gray-600" />
@@ -93,7 +93,7 @@ export default function UserProfileDropdown() {
         {/* View All Orders */}
         <div className="text-center mb-4">
           <Link
-            href="/orders"
+            href="/user/orders"
             className="text-blue-600 font-semibold text-sm hover:underline"
           >
             Lihat Semua Pesanan
@@ -112,7 +112,7 @@ export default function UserProfileDropdown() {
 
         <DropdownMenuItem asChild>
           <Link
-            href="/profile/settings"
+            href="/user/settings"
             className="flex items-center w-full py-2"
           >
             <Settings className="h-4 w-4 mr-3" />

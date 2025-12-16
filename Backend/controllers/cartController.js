@@ -808,38 +808,118 @@ exports.setShipping = async (req, res) => {
   }
 };
 
-// PUT /api/cart/voucher -> pasang voucher sederhana
-exports.setVoucher = async (req, res) => {
-  const userId = req.user.user_id;
+// POST /api/cart/voucher - apply voucher dengan validasi proper
+exports.applyVoucher = async (req, res) => {
+  const userId = req.user.user_id || req.user.id;
   const { code } = req.body;
+  
+  if (!code) return res.status(400).json({ message: "Voucher code required" });
+  
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    
+    const cartId = await getOrCreateCartId(userId);
+    const now = new Date();
+    
+    // Find voucher with all validations
+    const [vRows] = await conn.query(
+      `SELECT * FROM vouchers 
+       WHERE code = ? 
+       AND is_active = 1 
+       AND deleted_at IS NULL
+       AND (started_at IS NULL OR started_at <= ?)
+       AND (expired_at IS NULL OR expired_at >= ?)
+       LIMIT 1`,
+      [code, now, now]
+    );
+    
+    if (!vRows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Voucher tidak ditemukan atau sudah tidak berlaku" });
+    }
+    
+    const voucher = vRows[0];
+    
+    // Check total usage limit (quota)
+    if (voucher.quota && voucher.quota_used >= voucher.quota) {
+      await conn.rollback();
+      return res.status(400).json({ message: "Voucher sudah habis kuota" });
+    }
+    
+    // Check usage limit
+    if (voucher.usage_limit && voucher.usage_count >= voucher.usage_limit) {
+      await conn.rollback();
+      return res.status(400).json({ message: "Voucher sudah mencapai batas penggunaan" });
+    }
+    
+    // Check per-user usage limit
+    if (voucher.limit_per_user) {
+      const [usageRows] = await conn.query(
+        "SELECT COUNT(*) as count FROM voucher_usage WHERE voucher_id = ? AND user_id = ?",
+        [voucher.voucher_id, userId]
+      );
+      
+      if (usageRows[0].count >= voucher.limit_per_user) {
+        await conn.rollback();
+        return res.status(400).json({ 
+          message: `Anda sudah menggunakan voucher ini ${voucher.limit_per_user} kali (maksimal per user)` 
+        });
+      }
+    }
+    
+    // Calculate cart totals
+    const { subtotal } = await computeCartTotals(cartId);
+    
+    // Check minimum purchase
+    if (voucher.min_purchase_amount && subtotal < Number(voucher.min_purchase_amount)) {
+      await conn.rollback();
+      return res.status(400).json({ 
+        message: `Minimum pembelian untuk voucher ini adalah Rp ${Number(voucher.min_purchase_amount).toLocaleString('id-ID')}` 
+      });
+    }
+    
+    // Calculate discount
+    const discount = calculateVoucherDiscount(voucher, subtotal);
+    
+    // Remove existing voucher if any
+    await conn.query("DELETE FROM cart_vouchers WHERE cart_id = ?", [cartId]);
+    
+    // Apply new voucher
+    await conn.query(
+      "INSERT INTO cart_vouchers (cart_id, voucher_id, discount_amount) VALUES (?, ?, ?)",
+      [cartId, voucher.voucher_id, discount]
+    );
+    
+    await conn.commit();
+    
+    res.json({
+      message: "Voucher applied successfully",
+      voucher: {
+        voucher_id: voucher.voucher_id,
+        code: voucher.code,
+        name: voucher.name,
+        type: voucher.type,
+        value: Number(voucher.value),
+        discount_amount: discount,
+      },
+    });
+  } catch (e) {
+    await conn.rollback();
+    console.error("Apply voucher error:", e);
+    res.status(500).json({ message: "Server Error" });
+  } finally {
+    conn.release();
+  }
+};
+
+// DELETE /api/cart/voucher - remove applied voucher
+exports.removeVoucher = async (req, res) => {
+  const userId = req.user.user_id || req.user.id;
   try {
     const cartId = await getOrCreateCartId(userId);
-    const voucher = await findVoucherByCode(code);
-    if (!voucher)
-      return res.status(404).json({ message: "Voucher not found or inactive" });
-    const { subtotal } = await computeCartTotals(cartId);
-    if (subtotal < Number(voucher.min_order_amount || 0)) {
-      return res
-        .status(400)
-        .json({ message: "Subtotal not eligible for this voucher" });
-    }
-    const discount = calculateVoucherDiscount(voucher, subtotal);
-    const [rows] = await db.query(
-      "SELECT cart_id FROM cart_vouchers WHERE cart_id = ?",
-      [cartId]
-    );
-    if (rows.length) {
-      await db.query(
-        "UPDATE cart_vouchers SET voucher_id=?, discount_amount=? WHERE cart_id=?",
-        [voucher.voucher_id, discount, cartId]
-      );
-    } else {
-      await db.query(
-        "INSERT INTO cart_vouchers (cart_id, voucher_id, discount_amount) VALUES (?, ?, ?)",
-        [cartId, voucher.voucher_id, discount]
-      );
-    }
-    res.json({ message: "Voucher set", discount });
+    await db.query("DELETE FROM cart_vouchers WHERE cart_id = ?", [cartId]);
+    res.json({ message: "Voucher removed" });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Server Error" });

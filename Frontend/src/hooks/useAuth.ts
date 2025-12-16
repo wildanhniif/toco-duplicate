@@ -7,6 +7,9 @@ interface User {
   name: string;
   role: "customer" | "seller" | "admin";
   store_id?: number | null;
+  email?: string;
+  phone_number?: string;
+  google_id?: string;
 }
 
 interface AuthState {
@@ -77,6 +80,9 @@ export const useAuth = () => {
             name: userPayload.name || userPayload.full_name,
             role: userPayload.role || "customer",
             store_id: userPayload.store_id || null,
+            email: userPayload.email,
+            phone_number: userPayload.phone_number,
+            google_id: userPayload.google_id,
           },
           token,
           isLoading: false,
@@ -186,6 +192,9 @@ export const useAuth = () => {
           name: userPayload.name || userPayload.full_name,
           role: userPayload.role || "customer",
           store_id: userPayload.store_id || null,
+          email: userPayload.email,
+          phone_number: userPayload.phone_number,
+          google_id: userPayload.google_id,
         },
         token,
         isLoading: false,

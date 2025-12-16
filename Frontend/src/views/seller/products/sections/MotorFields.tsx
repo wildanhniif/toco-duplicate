@@ -224,8 +224,8 @@ export default function MotorFields({
           Lokasi <span className="text-red-500">*</span>
         </h3>
 
-        {/* Google Maps Placeholder */}
-        <div className="h-64 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center mb-4">
+        {/* DISABLED: Google Maps Placeholder - requires subscription */}
+        {/* <div className="h-64 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center mb-4">
           <div className="text-center">
             <MapPin className="h-8 w-8 text-gray-400 mx-auto mb-2" />
             <p className="text-gray-500">Google Maps - Pilih Lokasi</p>
@@ -233,7 +233,8 @@ export default function MotorFields({
               Pilih di Peta
             </Button>
           </div>
-        </div>
+        </div> */}
+
 
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-3">

@@ -7,12 +7,21 @@ const { sendVerificationEmail } = require("../utils/mailer"); // <-- Impor servi
 // ... fungsi register yang sudah ada, kita modifikasi isinya
 
 const register = async (req, res) => {
+  // Validation sudah dilakukan di route dengan validateRegister middleware
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
   const { fullName, phoneNumber, email, password, googleId } = req.body;
+  
+  // Additional password strength check (backend validation)
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({ 
+      message: "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character (@$!%*?&#)" 
+    });
+  }
 
   try {
     // Check existing user

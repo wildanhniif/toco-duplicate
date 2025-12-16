@@ -226,8 +226,8 @@ export default function LocationPickerModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Google Maps Placeholder */}
-          <div className="h-64 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+          {/* DISABLED: Google Maps Placeholder - requires subscription */}
+          {/* <div className="h-64 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
             <div className="text-center">
               <MapPin className="h-8 w-8 text-gray-400 mx-auto mb-2" />
               <p className="text-gray-500">
@@ -237,7 +237,8 @@ export default function LocationPickerModal({
                 Klik untuk memilih lokasi di peta
               </p>
             </div>
-          </div>
+          </div> */}
+
 
           {/* Address Input */}
           <div>

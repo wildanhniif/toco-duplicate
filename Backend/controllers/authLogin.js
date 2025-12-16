@@ -53,6 +53,9 @@ const login = async (req, res) => {
       name: user.full_name, // Fix: gunakan full_name bukan name
       role: user.role,
       store_id: store_id, // <-- konsisten dengan database
+      email: user.email,
+      phone_number: user.phone_number,
+      google_id: user.google_id,
     };
 
     // Buat dan kirim token

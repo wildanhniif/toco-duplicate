@@ -9,6 +9,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ShippingSettings from "./ShippingSettings";
 
+import StoreInfoSettings from "./StoreInfoSettings";
+
 export default function SellerSettingsView() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -19,7 +21,7 @@ export default function SellerSettingsView() {
   const currentTab =
     tabFromUrl && ["info", "kurir", "template", "keamanan"].includes(tabFromUrl)
       ? tabFromUrl
-      : "kurir";
+      : "info";
 
   // Auth check
   useEffect(() => {
@@ -61,15 +63,6 @@ export default function SellerSettingsView() {
         {/* Main Content */}
         <div className="flex-1 ml-64 p-8">
           <div className="max-w-7xl mx-auto">
-            {/* Back Button */}
-            <div className="mb-4">
-              <Link href="/seller/dashboard">
-                <Button variant="outline" size="sm">
-                  ← Kembali ke Dashboard
-                </Button>
-              </Link>
-            </div>
-
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-2xl font-bold mb-2">Pengaturan Toko</h1>
@@ -108,17 +101,7 @@ export default function SellerSettingsView() {
               </TabsList>
 
               <TabsContent value="info">
-                <div className="bg-white rounded-lg border p-8 text-center">
-                  <p className="text-gray-500">
-                    Untuk mengubah informasi toko, silakan kunjungi halaman{" "}
-                    <a
-                      href="/seller/store/settings"
-                      className="text-yellow-600 hover:underline"
-                    >
-                      Pengaturan Toko
-                    </a>
-                  </p>
-                </div>
+                <StoreInfoSettings />
               </TabsContent>
 
               <TabsContent value="kurir">

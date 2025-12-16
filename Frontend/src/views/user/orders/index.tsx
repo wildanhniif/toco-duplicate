@@ -440,14 +440,26 @@ export default function UserOrdersPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="w-full max-w-[1200px] mx-auto px-4 pt-24 lg:pt-32">
+      <div className="w-full max-w-[1200px] mx-auto px-4 pt-32">
         {/* Header */}
         <div className="mb-6">
+          <Breadcrumb className="mb-4">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/">Home</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Pesanan Saya</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.push("/")}
-            className="mb-4"
+            className="mb-4 pl-0 hover:pl-2 transition-all"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Kembali

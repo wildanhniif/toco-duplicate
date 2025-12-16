@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MapPin, ChevronRight } from "lucide-react";
-import GoogleMapsPicker from "@/components/composites/GoogleMapsPicker";
+// import GoogleMapsPicker from "@/components/composites/GoogleMapsPicker"; // DISABLED: Google Maps requires subscription
 
 interface LocationData {
   address_line: string;
@@ -69,7 +69,7 @@ export default function LocationUpdateModal({
   const [selectedProvinceId, setSelectedProvinceId] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
   const [selectedDistrictId, setSelectedDistrictId] = useState("");
-  const [showMapPicker, setShowMapPicker] = useState(false);
+  // const [showMapPicker, setShowMapPicker] = useState(false); // DISABLED: Google Maps requires subscription
 
   useEffect(() => {
     if (currentLocation) {
@@ -223,9 +223,10 @@ export default function LocationUpdateModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 py-2">
-          {/* Row 1: Pin Point & Kode Pos */}
+          {/* Row 1: Kode Pos */}
+          {/* DISABLED: Google Maps Pin Point - requires subscription */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            {/* <div>
               <Label htmlFor="pinpoint" className="block mb-2 text-sm">
                 Lokasi Toko (Pin Poin Lokasi)
                 <span className="text-red-500">*</span>
@@ -240,7 +241,7 @@ export default function LocationUpdateModal({
                 </span>
                 <ChevronRight className="h-4 w-4 text-gray-400" />
               </div>
-            </div>
+            </div> */}
             <div>
               <Label htmlFor="postal_code" className="block mb-2 text-sm">
                 Kode Pos<span className="text-red-500">*</span>
@@ -411,8 +412,8 @@ export default function LocationUpdateModal({
         </form>
       </DialogContent>
 
-      {/* Google Maps Picker Modal */}
-      <GoogleMapsPicker
+      {/* DISABLED: Google Maps Picker Modal - requires subscription */}
+      {/* <GoogleMapsPicker
         isOpen={showMapPicker}
         onClose={() => setShowMapPicker(false)}
         onSelectLocation={(location) => {
@@ -437,7 +438,7 @@ export default function LocationUpdateModal({
               }
             : undefined
         }
-      />
+      /> */}
     </Dialog>
   );
 }

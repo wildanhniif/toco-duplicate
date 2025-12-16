@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 30, 2025 at 09:37 AM
+-- Generation Time: Dec 10, 2025 at 05:42 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -531,6 +531,7 @@ CREATE TABLE `store_about_pages` (
   `store_id` int(10) UNSIGNED NOT NULL,
   `title` varchar(255) NOT NULL,
   `content` text NOT NULL,
+  `thumbnail_url` varchar(500) DEFAULT NULL COMMENT 'Cloudinary thumbnail URL for about page',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -624,21 +625,31 @@ CREATE TABLE `user_addresses` (
 CREATE TABLE `vouchers` (
   `voucher_id` bigint(20) UNSIGNED NOT NULL,
   `store_id` int(10) UNSIGNED DEFAULT NULL,
+  `voucher_type` enum('discount','free_shipping') NOT NULL DEFAULT 'discount' COMMENT 'Voucher Diskon / Gratis Ongkir',
+  `target_type` enum('public','private') NOT NULL DEFAULT 'public' COMMENT 'Publik / Khusus',
   `code` varchar(50) NOT NULL,
   `name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
   `type` enum('fixed','percentage') NOT NULL DEFAULT 'fixed',
   `value` decimal(15,2) NOT NULL,
   `min_purchase_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
   `max_discount_amount` decimal(15,2) DEFAULT NULL,
+  `estimated_cost` decimal(12,2) DEFAULT NULL COMMENT 'Estimasi pengeluaran',
   `usage_limit` int(10) UNSIGNED DEFAULT NULL,
   `usage_count` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `limit_per_user` int(10) UNSIGNED DEFAULT NULL COMMENT 'Limit voucher per pembeli',
   `user_usage_limit` int(10) UNSIGNED NOT NULL DEFAULT 1,
+  `apply_to` enum('all_products','specific_products') DEFAULT 'all_products' COMMENT 'Penerapan voucher',
+  `quota` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Kuota promosi total',
+  `quota_used` int(10) UNSIGNED DEFAULT 0 COMMENT 'Kuota yang sudah digunakan',
   `started_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `expired_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `expired_at` timestamp NULL DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `status` enum('upcoming','active','ended','cancelled') DEFAULT 'active' COMMENT 'Status voucher',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL COMMENT 'Soft delete timestamp'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -657,10 +668,10 @@ CREATE TABLE `voucher_products` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `voucher_usages`
+-- Table structure for table `voucher_usage`
 --
 
-CREATE TABLE `voucher_usages` (
+CREATE TABLE `voucher_usage` (
   `voucher_usage_id` bigint(20) UNSIGNED NOT NULL,
   `voucher_id` bigint(20) UNSIGNED NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -963,7 +974,12 @@ ALTER TABLE `vouchers`
   ADD UNIQUE KEY `uk_vouchers_code` (`code`),
   ADD KEY `fk_vouchers_store` (`store_id`),
   ADD KEY `idx_vouchers_active_period` (`is_active`,`started_at`,`expired_at`),
-  ADD KEY `idx_vouchers_type` (`type`);
+  ADD KEY `idx_vouchers_type` (`type`),
+  ADD KEY `idx_voucher_code` (`code`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_dates` (`started_at`,`expired_at`),
+  ADD KEY `idx_store_vouchers` (`store_id`),
+  ADD KEY `idx_active` (`is_active`,`deleted_at`);
 
 --
 -- Indexes for table `voucher_products`
@@ -975,9 +991,9 @@ ALTER TABLE `voucher_products`
   ADD KEY `fk_voucher_products_product` (`product_id`);
 
 --
--- Indexes for table `voucher_usages`
+-- Indexes for table `voucher_usage`
 --
-ALTER TABLE `voucher_usages`
+ALTER TABLE `voucher_usage`
   ADD PRIMARY KEY (`voucher_usage_id`),
   ADD UNIQUE KEY `uk_voucher_usages_order` (`voucher_id`,`order_id`),
   ADD KEY `fk_voucher_usages_voucher` (`voucher_id`),
@@ -1182,9 +1198,9 @@ ALTER TABLE `voucher_products`
   MODIFY `voucher_product_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `voucher_usages`
+-- AUTO_INCREMENT for table `voucher_usage`
 --
-ALTER TABLE `voucher_usages`
+ALTER TABLE `voucher_usage`
   MODIFY `voucher_usage_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -1374,9 +1390,9 @@ ALTER TABLE `voucher_products`
   ADD CONSTRAINT `fk_voucher_products_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `voucher_usages`
+-- Constraints for table `voucher_usage`
 --
-ALTER TABLE `voucher_usages`
+ALTER TABLE `voucher_usage`
   ADD CONSTRAINT `fk_voucher_usages_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_voucher_usages_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_voucher_usages_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`voucher_id`) ON DELETE CASCADE;

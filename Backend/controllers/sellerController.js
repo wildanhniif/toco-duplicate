@@ -383,7 +383,7 @@ exports.getDashboardStats = async (req, res) => {
 
     // Get product count
     const [products] = await db.execute(
-      `SELECT COUNT(*) as count FROM products WHERE store_id = ? AND is_active = 1`,
+      `SELECT COUNT(*) as count FROM products WHERE store_id = ? AND status = 'active'`,
       [storeId]
     );
 

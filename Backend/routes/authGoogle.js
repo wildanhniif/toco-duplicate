@@ -34,7 +34,7 @@ router.get(
 
     try {
       const [userDetails] = await connection.execute(
-        `SELECT u.user_id, u.full_name, u.role, s.store_id 
+        `SELECT u.user_id, u.full_name, u.role, u.email, u.phone_number, u.google_id, s.store_id 
          FROM users u 
          LEFT JOIN stores s ON u.user_id = s.user_id 
          WHERE u.user_id = ?`,
@@ -50,6 +50,9 @@ router.get(
           name: fullUserData.full_name,
           role: fullUserData.role || "customer",
           store_id: fullUserData.store_id || null,
+          email: fullUserData.email,
+          phone_number: fullUserData.phone_number,
+          google_id: fullUserData.google_id,
         };
 
         jwt.sign(

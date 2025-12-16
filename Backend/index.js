@@ -33,18 +33,16 @@ const startServer = async () => {
   const shippingRoutes = require("./routes/shippingRoutes");
   const paymentRoutes = require("./routes/paymentRoutes");
   const uploadRoutes = require("./routes/uploadRoutes");
+  const storeSettingsRoutes = require("./routes/storeSettings");
+  const templateRoutes = require("./routes/templateRoutes");
+  const voucherRoutes = require("./routes/voucherRoutes");
+  const { uploadLimiter, authLimiter, checkoutLimiter } = require("./middleware/rateLimiters");
+  const { sanitizeInput } = require("./middleware/validationMiddleware");
 
   const app = express();
 
-  // Stricter rate limiting for auth endpoints
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 auth requests per windowMs
-    message: {
-      error: "Too many authentication attempts, please try again later.",
-    },
-    skipSuccessfulRequests: true,
-  });
+  // Stricter rate limiting for auth endpoints (moved to rateLimiters.js)
+  // ... CORS configured above ...
 
   // Health check endpoint
   app.get("/api/health", async (req, res) => {
@@ -67,9 +65,36 @@ const startServer = async () => {
   });
 
   // Middleware
-  // CORS: super-permissive in development to avoid blocking localhost:3000
-  // NOTE: This can be tightened later for production.
-  app.use(cors());
+  // CORS configuration with whitelist
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    process.env.FRONTEND_URL,
+    process.env.PRODUCTION_URL
+  ].filter(Boolean); // Remove undefined values
+
+  const corsOptions = {
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        // In development, allow all origins
+        if (process.env.NODE_ENV === 'development') {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+
+  app.use(cors(corsOptions));
 
   // Rate limiting configuration (only strict in production)
   const limiter = rateLimit({
@@ -86,10 +111,19 @@ const startServer = async () => {
   if (process.env.NODE_ENV === "production") {
     app.use(limiter);
   }
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  
+  // Body parser with size limits to prevent DoS
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  
+  // Body parser with size limits configured above
   app.use(passport.initialize());
-  app.use("/api/users", userRoutes); // <-- Tambahkan ini
+  
+  // Apply sanitization to all requests
+  app.use(sanitizeInput);
+  
+  // Routes
+  app.use("/api/users", userRoutes);
   app.use("/api/auth", authLimiter, authRegisterRoutes);
   app.use("/api/auth", authLimiter, authLoginRoutes);
   app.use("/api/auth", authLimiter, authGoogle);
@@ -101,14 +135,23 @@ const startServer = async () => {
   app.use("/api/categories", categoryRoutes);
   app.use("/api/products", productRoutes);
   app.use("/api/cart", cartRoutes);
-  app.use("/api/checkout", checkoutRoutes);
+  app.use("/api/checkout", checkoutLimiter, checkoutRoutes);
   app.use("/api/vouchers", voucherSellerRoutes);
+  app.use("/api/vouchers", voucherRoutes);
   app.use("/api/orders", orderRoutes);
   app.use("/api/shipping", shippingRoutes);
   app.use("/api/payments", paymentRoutes);
-  app.use("/api/upload", uploadRoutes);
+  app.use("/api/upload", uploadLimiter, uploadRoutes);
+  app.use("/api/store-settings", storeSettingsRoutes);
+  app.use("/api/templates", templateRoutes);
+  app.use("/api/templates", templateRoutes);
   // Serve static uploads (product/store images)
   app.use("/uploads", express.static("uploads"));
+  
+  // Global error handler (must be last)
+  const { errorHandler, requestLogger } = require("./utils/errorHandler");
+  app.use(requestLogger);
+  app.use(errorHandler);
 
   // Jalankan Server
   const PORT = process.env.PORT || 5000;
