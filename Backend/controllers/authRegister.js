@@ -9,30 +9,65 @@ const { sendVerificationEmail } = require("../utils/mailer"); // <-- Impor servi
 const register = async (req, res) => {
   // Validation sudah dilakukan di route dengan validateRegister middleware
   const errors = validationResult(req);
+  console.log("Register Request Body:", req.body); // DEBUG LOG
   if (!errors.isEmpty()) {
+    console.log("Validation Errors:", errors.array()); // DEBUG LOG
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { fullName, phoneNumber, email, password, googleId } = req.body;
-  
-  // Additional password strength check (backend validation)
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
-  if (!passwordRegex.test(password)) {
-    return res.status(400).json({ 
-      message: "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character (@$!%*?&#)" 
-    });
-  }
+  // Password validation is handled by validateRegister middleware
 
   try {
-    // Check existing user
-    const [existingUser] = await pool.query(
-      "SELECT * FROM users WHERE email = ? OR phone_number = ?",
-      [email, phoneNumber]
+    const { fullName, phoneNumber, email, password, confirmPassword, googleId } = req.body; 
+
+    // Server-side password match validation to allow simultaneous error reporting
+    const validationErrors = [];
+    
+    if (password !== confirmPassword) {
+      validationErrors.push({
+        path: "confirmPassword",
+        msg: "Password dan Konfirmasi Password tidak cocok."
+      });
+    }
+
+    // Check for existing user with detailed error reporting (now includes fullName)
+    const [existingUsers] = await pool.query(
+      "SELECT full_name, email, phone_number FROM users WHERE email = ? OR phone_number = ? OR full_name = ?",
+      [email, phoneNumber, fullName]
     );
-    if (existingUser.length > 0) {
-      return res
-        .status(409)
-        .json({ message: "Email atau Nomor Telepon sudah terdaftar." });
+
+    if (existingUsers.length > 0) {
+      // Check if email exists
+      const emailExists = existingUsers.some(user => user.email === email);
+      if (emailExists) {
+        validationErrors.push({
+          path: "email",
+          msg: "Email sudah terdaftar. Gunakan email lain."
+        });
+      }
+
+      // Check if phone number exists
+      const phoneExists = existingUsers.some(user => user.phone_number === phoneNumber);
+      if (phoneExists) {
+        validationErrors.push({
+          path: "phoneNumber",
+          msg: "Nomor telepon sudah terdaftar. Gunakan nomor lain."
+        });
+      }
+      
+      // Check if full name exists (Requested by user)
+      const nameExists = existingUsers.some(user => user.full_name === fullName);
+      if (nameExists) {
+        validationErrors.push({
+          path: "fullName",
+          msg: "Nama Lengkap sudah terdaftar. Gunakan nama lain."
+        });
+      }
+    }
+
+    // Return all collected errors if any
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ errors: validationErrors });
     }
 
     const salt = await bcrypt.genSalt(10);

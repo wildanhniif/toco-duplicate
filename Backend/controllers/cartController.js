@@ -136,6 +136,7 @@ exports.getCart = async (req, res) => {
         product_name: it.product_name,
         product_image: it.product_image,
         sku_id: it.sku_id,
+        variant_id: it.variant_id, // Still pass variant_id for future use
         variation: variationText,
         stock: it.product_stock,
         quantity: it.quantity,
@@ -213,6 +214,7 @@ exports.addItem = async (req, res) => {
     return res.status(400).json({ message: "product_id required" });
   try {
     const cartId = await getOrCreateCartId(userId);
+    
     // Ambil product info
     const [pRows] = await db.query(
       "SELECT product_id, store_id, name, price, weight_gram FROM products WHERE product_id = ?",
@@ -223,6 +225,8 @@ exports.addItem = async (req, res) => {
     const p = pRows[0];
     let unitPrice = p.price;
     let weightGram = p.weight_gram;
+    
+    // Handle SKU logic
     if (sku_id) {
       const [skuRows] = await db.query(
         "SELECT sku_id, price, weight_gram FROM product_skus WHERE sku_id = ? AND product_id = ?",
@@ -234,13 +238,39 @@ exports.addItem = async (req, res) => {
       // Gunakan weight dari SKU jika ada, fallback ke product weight
       if (skuRows[0].weight_gram) weightGram = skuRows[0].weight_gram;
     }
-    // Snapshot harga disimpan di unit_price; gambar diambil saat render dari product_images
-    await db.query(
-      `INSERT INTO cart_items (cart_id, product_id, sku_id, quantity, unit_price, is_selected)
-       VALUES (?, ?, ?, ?, ?, 1)`,
-      [cartId, product_id, sku_id || null, quantity, unitPrice]
-    );
-    res.status(201).json({ message: "Added to cart" });
+
+    // Check if item already exists in cart (Merge Logic)
+    let query = "SELECT cart_item_id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ?";
+    const params = [cartId, product_id];
+
+    if (sku_id) {
+      query += " AND sku_id = ?";
+      params.push(sku_id);
+    } else {
+      query += " AND sku_id IS NULL";
+    }
+
+    const [existingItems] = await db.query(query, params);
+
+    if (existingItems.length > 0) {
+      // Item exists, update quantity
+      const existingItem = existingItems[0];
+      const newQuantity = existingItem.quantity + quantity;
+      
+      await db.query(
+        "UPDATE cart_items SET quantity = ? WHERE cart_item_id = ?",
+        [newQuantity, existingItem.cart_item_id]
+      );
+      res.json({ message: "Cart updated", cart_item_id: existingItem.cart_item_id });
+    } else {
+      // Item new, insert
+      await db.query(
+        `INSERT INTO cart_items (cart_id, product_id, sku_id, quantity, unit_price, is_selected)
+         VALUES (?, ?, ?, ?, ?, 1)`,
+        [cartId, product_id, sku_id || null, quantity, unitPrice]
+      );
+      res.status(201).json({ message: "Added to cart" });
+    }
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Server Error" });

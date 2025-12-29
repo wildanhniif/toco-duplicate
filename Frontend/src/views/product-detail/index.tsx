@@ -8,12 +8,23 @@ import ProductCarousel from "@/components/composites/Carousel/ProductCarousel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import ProductVariantSelector from "@/components/composites/Product/ProductVariantSelector";
 import { toast } from "sonner";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface ProductDetailProps {
   slug: string;
+}
+
+interface ProductVariant {
+  variant_id: number;
+  variant_name: string;
+  variant_value: string;
+  price_adjustment: number;
+  image_url: string | null;
+  stock_quantity: number;
+  sku: string | null;
 }
 
 interface Product {
@@ -97,6 +108,8 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const [storeProducts, setStoreProducts] = useState<
     RecomendationProductItem[]
   >([]);
@@ -132,13 +145,26 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
         setProduct(data);
         setActiveImage(initialImage);
 
-        // Load recommendations in parallel
+        // Load variants and recommendations in parallel
+        fetchVariants(data.product_id);
         fetchRecommendations(data);
       } catch (e) {
         console.error("Error fetching product detail:", e);
         setError("Terjadi kesalahan saat memuat produk");
       } finally {
         setLoading(false);
+      }
+    };
+
+    const fetchVariants = async (productId: number) => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/products/${productId}/variants`);
+        if (res.ok) {
+          const data = await res.json();
+          setVariants(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.error("Error fetching variants:", e);
       }
     };
 
@@ -216,7 +242,11 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ product_id: product.product_id, quantity: 1 }),
+        body: JSON.stringify({ 
+          product_id: product.product_id, 
+          quantity: 1,
+          variant_id: selectedVariantId 
+        }),
       });
 
       if (!res.ok) {
@@ -226,6 +256,12 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
       }
 
       toast.success("Produk berhasil ditambahkan ke keranjang");
+      
+      // Trigger cart badge refresh
+      if (typeof window !== "undefined" && (window as any).refreshCartBadge) {
+        (window as any).refreshCartBadge();
+      }
+      
       return true;
     } catch (e) {
       console.error("Error adding to cart:", e);
@@ -285,13 +321,25 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
     typeof product.discount_percentage === "number" &&
     product.discount_percentage > 0;
 
-  const currentPrice = product.price;
+  const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId);
+  const variantPriceAdjustment = selectedVariant?.price_adjustment || 0;
+  const currentPrice = product.price + variantPriceAdjustment;
   const originalPrice = hasDiscount
     ? Math.round(currentPrice / (1 - (product.discount_percentage ?? 0) / 100))
     : null;
 
   const mainImageSrc =
-    activeImage || product.primary_image || "/iphone-product.webp";
+    (selectedVariant?.image_url) || activeImage || product.primary_image || "/iphone-product.webp";
+
+  const handleVariantSelect = (variantId: number | null) => {
+    setSelectedVariantId(variantId);
+    if (variantId) {
+      const variant = variants.find((v) => v.variant_id === variantId);
+      if (variant?.image_url) {
+        setActiveImage(variant.image_url);
+      }
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 pb-12">
@@ -486,6 +534,18 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
                 </span>
               )}
             </div>
+
+            {/* Product Variants */}
+            {variants.length > 0 && (
+              <div className="mt-4">
+                <ProductVariantSelector
+                  variants={variants}
+                  selectedVariantId={selectedVariantId}
+                  onVariantSelect={handleVariantSelect}
+                  basePrice={product.price}
+                />
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-3 mt-4">
               <Button

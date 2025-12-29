@@ -9,41 +9,59 @@ import UserProfileDropdown from "./UserProfileDropdown";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
+// Global function to refresh cart badge from anywhere
+if (typeof window !== "undefined") {
+  (window as any).refreshCartBadge = () => {
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+}
+
 export default function AuthButton() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [cartCount, setCartCount] = useState<number | null>(null);
 
+  const fetchCartCount = async () => {
+    if (!isAuthenticated) {
+      setCartCount(null);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/cart`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const count =
+        data?.summary && typeof data.summary.total_items === "number"
+          ? data.summary.total_items
+          : 0;
+      setCartCount(count);
+    } catch (error) {
+      console.error("Error fetching cart count:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchCartCount = async () => {
-      if (!isAuthenticated) {
-        setCartCount(null);
-        return;
-      }
+    fetchCartCount();
 
-      try {
-        const token = localStorage.getItem("auth_token");
-        if (!token) return;
-
-        const response = await fetch(`${API_BASE_URL}/api/cart`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) return;
-
-        const data = await response.json();
-        const count =
-          data?.summary && typeof data.summary.total_items === "number"
-            ? data.summary.total_items
-            : 0;
-        setCartCount(count);
-      } catch (error) {
-        console.error("Error fetching cart count:", error);
-      }
+    // Listen for cart update events
+    const handleCartUpdate = () => {
+      fetchCartCount();
     };
 
-    fetchCartCount();
+    window.addEventListener("cartUpdated", handleCartUpdate);
+
+    return () => {
+      window.removeEventListener("cartUpdated", handleCartUpdate);
+    };
   }, [isAuthenticated]);
 
   // Show loading state

@@ -26,6 +26,7 @@ const startServer = async () => {
   const storeRoutes = require("./routes/storeRoutes");
   const categoryRoutes = require("./routes/categories");
   const productRoutes = require("./routes/productRoutes");
+  // const productVariantRoutes = require("./routes/productVariantRoutes"); // TEMPORARY DISABLED
   const cartRoutes = require("./routes/cartRoutes");
   const checkoutRoutes = require("./routes/checkoutRoutes");
   const voucherSellerRoutes = require("./routes/voucherSellerRoutes");
@@ -134,6 +135,7 @@ const startServer = async () => {
   app.use("/api/stores", storeRoutes);
   app.use("/api/categories", categoryRoutes);
   app.use("/api/products", productRoutes);
+  // app.use("/api", productVariantRoutes); // TEMPORARY DISABLED - Variant routes
   app.use("/api/cart", cartRoutes);
   app.use("/api/checkout", checkoutLimiter, checkoutRoutes);
   app.use("/api/vouchers", voucherSellerRoutes);
@@ -144,7 +146,8 @@ const startServer = async () => {
   app.use("/api/upload", uploadLimiter, uploadRoutes);
   app.use("/api/store-settings", storeSettingsRoutes);
   app.use("/api/templates", templateRoutes);
-  app.use("/api/templates", templateRoutes);
+  app.use("/api/banners", require("./routes/bannerRoutes"));
+  app.use("/api/admin", require("./routes/adminRoutes"));
   // Serve static uploads (product/store images)
   app.use("/uploads", express.static("uploads"));
   

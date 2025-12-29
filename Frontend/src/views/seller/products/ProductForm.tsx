@@ -146,6 +146,12 @@ export default function ProductFormView({ productId }: ProductFormViewProps) {
     if (isLoading) return;
     if (!isAuthenticated || user?.role !== "seller") {
       router.push("/login");
+      return;
+    }
+    
+    // Redirect if user doesn't have a store yet
+    if (!user.store_id) {
+      router.push("/seller/store/setup");
     }
   }, [user, isAuthenticated, isLoading, router]);
 

@@ -135,6 +135,11 @@ export default function CartPage() {
       });
 
       fetchCart();
+      
+      // Trigger cart badge refresh
+      if (typeof window !== "undefined" && (window as any).refreshCartBadge) {
+        (window as any).refreshCartBadge();
+      }
     } catch (error) {
       console.error("Error deleting selected:", error);
     }
@@ -155,6 +160,11 @@ export default function CartPage() {
       });
 
       fetchCart();
+      
+      // Trigger cart badge refresh
+      if (typeof window !== "undefined" && (window as any).refreshCartBadge) {
+        (window as any).refreshCartBadge();
+      }
     } catch (error) {
       console.error("Error updating quantity:", error);
     }
@@ -194,6 +204,11 @@ export default function CartPage() {
       });
 
       fetchCart();
+      
+      // Trigger cart badge refresh
+      if (typeof window !== "undefined" && (window as any).refreshCartBadge) {
+        (window as any).refreshCartBadge();
+      }
     } catch (error) {
       console.error("Error deleting item:", error);
     }

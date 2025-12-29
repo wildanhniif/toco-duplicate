@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 10, 2025 at 05:42 AM
+-- Generation Time: Dec 29, 2025 at 11:59 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -20,6 +20,23 @@ SET time_zone = "+00:00";
 --
 -- Database: `toco_clone`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `banners`
+--
+
+CREATE TABLE `banners` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `redirect_url` varchar(500) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -685,6 +702,12 @@ CREATE TABLE `voucher_usage` (
 --
 
 --
+-- Indexes for table `banners`
+--
+ALTER TABLE `banners`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `carts`
 --
 ALTER TABLE `carts`
@@ -709,7 +732,8 @@ ALTER TABLE `cart_shipping_selections`
   ADD PRIMARY KEY (`shipping_selection_id`),
   ADD UNIQUE KEY `uk_cart_shipping_selections` (`cart_id`,`store_id`),
   ADD KEY `fk_cart_shipping_selections_cart` (`cart_id`),
-  ADD KEY `fk_cart_shipping_selections_store` (`store_id`);
+  ADD KEY `fk_cart_shipping_selections_store` (`store_id`),
+  ADD KEY `idx_cart_shipping_cart_store` (`cart_id`,`store_id`);
 
 --
 -- Indexes for table `cart_vouchers`
@@ -779,7 +803,8 @@ ALTER TABLE `orders`
   ADD KEY `idx_orders_status` (`status`),
   ADD KEY `idx_orders_payment_status` (`payment_status`),
   ADD KEY `idx_orders_created` (`created_at`),
-  ADD KEY `idx_orders_user_status` (`user_id`,`status`);
+  ADD KEY `idx_orders_user_status` (`user_id`,`status`),
+  ADD KEY `idx_orders_user_created` (`user_id`,`created_at`);
 
 --
 -- Indexes for table `order_items`
@@ -789,7 +814,8 @@ ALTER TABLE `order_items`
   ADD KEY `fk_order_items_order` (`order_id`),
   ADD KEY `fk_order_items_product` (`product_id`),
   ADD KEY `fk_order_items_sku` (`sku_id`),
-  ADD KEY `idx_order_items_price` (`unit_price`);
+  ADD KEY `idx_order_items_price` (`unit_price`),
+  ADD KEY `idx_order_items_order` (`order_id`);
 
 --
 -- Indexes for table `order_shipments`
@@ -843,7 +869,8 @@ ALTER TABLE `products`
   ADD KEY `idx_products_active` (`status`,`store_id`),
   ADD KEY `idx_products_deleted` (`deleted_at`),
   ADD KEY `idx_products_price` (`price`),
-  ADD KEY `idx_products_rating` (`rating_average`);
+  ADD KEY `idx_products_rating` (`rating_average`),
+  ADD KEY `idx_products_store_status` (`store_id`,`status`);
 
 --
 -- Indexes for table `product_images`
@@ -852,7 +879,8 @@ ALTER TABLE `product_images`
   ADD PRIMARY KEY (`image_id`),
   ADD KEY `fk_product_images_product` (`product_id`),
   ADD KEY `idx_product_images_sort` (`sort_order`),
-  ADD KEY `idx_product_images_primary` (`is_primary`);
+  ADD KEY `idx_product_images_primary` (`is_primary`),
+  ADD KEY `idx_product_images_product_sort` (`product_id`,`sort_order`);
 
 --
 -- Indexes for table `product_promotions`
@@ -873,7 +901,8 @@ ALTER TABLE `product_skus`
   ADD UNIQUE KEY `uk_product_skus_code` (`product_id`,`sku_code`),
   ADD KEY `fk_product_skus_product` (`product_id`),
   ADD KEY `idx_product_skus_price` (`price`),
-  ADD KEY `idx_product_skus_stock` (`stock_quantity`);
+  ADD KEY `idx_product_skus_stock` (`stock_quantity`),
+  ADD KEY `idx_product_skus_product` (`product_id`,`stock_quantity`);
 
 --
 -- Indexes for table `product_sku_options`
@@ -999,11 +1028,18 @@ ALTER TABLE `voucher_usage`
   ADD KEY `fk_voucher_usages_voucher` (`voucher_id`),
   ADD KEY `fk_voucher_usages_user` (`user_id`),
   ADD KEY `fk_voucher_usages_order` (`order_id`),
-  ADD KEY `idx_voucher_usages_used` (`used_at`);
+  ADD KEY `idx_voucher_usages_used` (`used_at`),
+  ADD KEY `idx_voucher_usage_voucher_user` (`voucher_id`,`user_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `banners`
+--
+ALTER TABLE `banners`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `carts`

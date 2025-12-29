@@ -15,7 +15,9 @@ const login = async (req, res) => {
     );
 
     if (users.length === 0) {
-      return res.status(404).json({ message: "User tidak ditemukan." });
+      return res.status(404).json({ 
+        errors: [{ path: "identifier", msg: "Email atau Nomor Telepon tidak terdaftar." }] 
+      });
     }
 
     const user = users[0];
@@ -34,13 +36,18 @@ const login = async (req, res) => {
 
     // Cek jika akun sudah diverifikasi
     if (!user.is_verified) {
-      return res.status(403).json({ message: "Akun belum diverifikasi." });
+      return res.status(403).json({ 
+        message: "Akun belum diverifikasi. Silakan cek email Anda.",
+        // errors: [{ path: "identifier", msg: "Akun belum diverifikasi." }] // Optional field error
+      });
     }
 
     // Cek kecocokan password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(401).json({ message: "Password salah." });
+      return res.status(401).json({ 
+        errors: [{ path: "password", msg: "Password salah." }] 
+      });
     }
 
     // --- INI BAGIAN PAYLOAD YANG DISEMPURNAKAN ---

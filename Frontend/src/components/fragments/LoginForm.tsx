@@ -16,6 +16,7 @@ function LoginFormContent() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   // Check if this is a redirect to seller registration
   const redirectToSeller = searchParams.get("redirect_to_seller") === "true";
@@ -24,6 +25,7 @@ function LoginFormContent() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -38,9 +40,27 @@ function LoginFormContent() {
       const data = await response.json();
 
       if (!response.ok) {
-        const message =
-          data?.message || "Login gagal. Silakan periksa kembali data Anda.";
-        setError(message);
+        // Handle validation errors (array format) similar to RegisterForm
+        if (data?.errors && Array.isArray(data.errors)) {
+          const newFieldErrors: { [key: string]: string } = {};
+          data.errors.forEach((err: any) => {
+            if (err.path === "identifier") {
+              newFieldErrors["identifier"] = err.msg;
+            } else if (err.path === "password") {
+              newFieldErrors["password"] = err.msg;
+            }
+          });
+          setFieldErrors(newFieldErrors);
+
+          // Fallback global error if no specific fields match
+          if (Object.keys(newFieldErrors).length === 0) {
+            setError(data.errors[0]?.msg || "Login gagal.");
+          }
+        } else {
+          const message =
+            data?.message || "Login gagal. Silakan periksa kembali data Anda.";
+          setError(message);
+        }
         return;
       }
 
@@ -79,6 +99,7 @@ function LoginFormContent() {
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
         />
+        {fieldErrors.identifier && <p className="mt-1 text-sm text-red-500">{fieldErrors.identifier}</p>}
       </div>
       <InputGroupPassword
         name="password"
@@ -88,6 +109,7 @@ function LoginFormContent() {
       >
         Password
       </InputGroupPassword>
+      {fieldErrors.password && <p className="-mt-4 mb-4 text-sm text-red-500">{fieldErrors.password}</p>}
       {error && <p className="mb-2 text-sm text-red-500">{error}</p>}
       <Button
         type="submit"

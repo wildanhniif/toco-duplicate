@@ -1,12 +1,13 @@
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const pool = require("../config/database");
 
 /**
  * Middleware untuk memverifikasi token JWT.
  * Jika token valid, data user akan ditambahkan ke `req.user`.
  * Jika tidak, akan mengirim respon error.
  */
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   let token;
 
   // Cek apakah ada header 'Authorization' dan dimulai dengan 'Bearer'
@@ -26,8 +27,26 @@ const protect = (req, res, next) => {
       // Verifikasi token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+      // Verify user exists in database and get store_id
+      const [rows] = await pool.query(
+        `SELECT u.user_id, u.role, u.is_active, s.store_id 
+         FROM users u 
+         LEFT JOIN stores s ON u.user_id = s.user_id 
+         WHERE u.user_id = ?`,
+        [decoded.user_id]
+      );
+
+      if (rows.length === 0) {
+        return res.status(401).json({ message: "User tidak ditemukan. Token tidak valid." });
+      }
+
+      // Check if user is active
+      if (!rows[0].is_active) {
+        return res.status(401).json({ message: "Akun dinonaktifkan." });
+      }
+
       // Tambahkan payload ke req.user
-      req.user = decoded;
+      req.user = rows[0];
 
       // Lanjutkan ke controller berikutnya
       next();

@@ -137,9 +137,26 @@ const BannerCarouselDynamic = dynamic(
 );
 
 export default function HomeView() {
+  const [bannerImages, setBannerImages] = useState<string[]>([]);
   const [recomendationProducts, setRecomendationProducts] = useState<
     RecomendationProductItem[]
   >([]);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/banners`);
+        if (response.ok) {
+          const data = await response.json();
+          const imageUrls = data.map((b: any) => b.image_url);
+          setBannerImages(imageUrls.length > 0 ? imageUrls : ["/banner-1.webp", "/banner-2.webp"]);
+        }
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+      }
+    };
+    fetchBanners();
+  }, []); // KEEP THIS USE EFFECT
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -178,7 +195,7 @@ export default function HomeView() {
   return (
     <main className="w-full max-w-[1440px] mx-auto px-[5%] my-14 pt-10 lg:pt-24">
       {/* Banner Carousel */}
-      <BannerCarouselDynamic images={bannerImages} />
+      <BannerCarouselDynamic images={bannerImages.length > 0 ? bannerImages : ["/banner-1.webp", "/banner-2.webp"]} />
       {/* Categories Section */}
       <section className="flex items-center w-full lg:mt-10">
         <ul className="flex items-center gap-6 lg:gap-14 overflow-auto py-8">

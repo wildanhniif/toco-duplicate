@@ -82,7 +82,7 @@ interface FilterState {
 
 const ProductListView: React.FC = () => {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +119,13 @@ const ProductListView: React.FC = () => {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Check if store exists
+  useEffect(() => {
+    if (user && user.role === 'seller' && !user.store_id) {
+       router.push("/seller/store/setup");
+    }
+  }, [user, router]);
 
   // Fetch products when filters change
   useEffect(() => {

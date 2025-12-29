@@ -29,7 +29,7 @@ export default function AuthLayout(props: AuthLayoutProps) {
       </div>
       <div className="flex items-center">
         <div className="hidden lg:flex justify-center items-center w-full">
-          <Image src="/auth.svg" alt="Auth Image" width={450} height={450} />
+          <Image src="/auth.svg" alt="Auth Image" width={450} height={450} priority />
         </div>
         <div className="flex items-center justify-center w-full">
           <Card className="w-full py-8 gap-8 lg:max-w-lg">

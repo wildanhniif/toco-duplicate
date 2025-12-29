@@ -102,6 +102,21 @@ export default function UserProfileDropdown() {
 
         <DropdownMenuSeparator />
 
+        {/* Admin Dashboard - Only visible to admins */}
+        {user.role === "admin" && (
+          <DropdownMenuItem asChild>
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center w-full py-2 font-semibold text-blue-600"
+            >
+              <User className="h-4 w-4 mr-3" />
+              Admin Dashboard
+            </Link>
+          </DropdownMenuItem>
+        )}
+        
+        {user.role === "admin" && <DropdownMenuSeparator />}
+
         {/* Menu Items */}
         <DropdownMenuItem asChild>
           <Link href="/admin/chat" className="flex items-center w-full py-2">
