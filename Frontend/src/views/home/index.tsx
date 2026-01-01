@@ -138,6 +138,7 @@ const BannerCarouselDynamic = dynamic(
 
 export default function HomeView() {
   const [bannerImages, setBannerImages] = useState<string[]>([]);
+  const [brandBanners, setBrandBanners] = useState<{ id: number; href: string; img: string }[]>([]);
   const [recomendationProducts, setRecomendationProducts] = useState<
     RecomendationProductItem[]
   >([]);
@@ -145,18 +146,32 @@ export default function HomeView() {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/banners`);
-        if (response.ok) {
-          const data = await response.json();
+        // Fetch Main Banners
+        const mainRes = await fetch(`${API_BASE_URL}/api/banners?type=main`);
+        if (mainRes.ok) {
+          const data = await mainRes.json();
+          // Sort explicitly just in case, though API does it
           const imageUrls = data.map((b: any) => b.image_url);
           setBannerImages(imageUrls.length > 0 ? imageUrls : ["/banner-1.webp", "/banner-2.webp"]);
+        }
+
+        // Fetch Brand Banners
+        const brandRes = await fetch(`${API_BASE_URL}/api/banners?type=brand`);
+        if (brandRes.ok) {
+            const data = await brandRes.json();
+            const brands = data.map((b: any) => ({
+                id: b.id,
+                href: b.redirect_url || "/",
+                img: b.image_url
+            }));
+            setBrandBanners(brands);
         }
       } catch (error) {
         console.error("Error fetching banners:", error);
       }
     };
     fetchBanners();
-  }, []); // KEEP THIS USE EFFECT
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -352,16 +367,17 @@ export default function HomeView() {
             }}
             className="w-full"
           >
-            {brands.map((brand, i) => (
+            {(brandBanners.length > 0 ? brandBanners : brands).map((brand, i) => (
               <SwiperSlide key={i}>
                 <Link href={brand.href}>
-                  <Image
-                    src={brand.img}
-                    alt="Banner Brand"
-                    width={500}
-                    height={256}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative w-full h-64 md:h-48 rounded-xl overflow-hidden">
+                    <Image
+                      src={brand.img}
+                      alt="Banner Brand"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
                 </Link>
               </SwiperSlide>
             ))}

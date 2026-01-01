@@ -324,12 +324,44 @@ exports.getMyOrders = async (req, res) => {
   if (sort === "created_asc") orderBy = "o.created_at ASC";
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
+
+  // 1. Fetch Orders with Store Name
   const [rows] = await db.query(
-    `SELECT o.* FROM orders o WHERE ${where.join(
-      " AND "
-    )} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
+    `SELECT o.*, s.name as store_name
+     FROM orders o
+     JOIN stores s ON o.store_id = s.store_id
+     WHERE ${where.join(" AND ")}
+     ORDER BY ${orderBy}
+     LIMIT ? OFFSET ?`,
     [...params, parseInt(limit), offset]
   );
+
+  // 2. Fetch Items for these orders (if any)
+  if (rows.length > 0) {
+    const orderIds = rows.map((r) => r.order_id);
+    const [items] = await db.query(
+      `SELECT oi.*, p.name as product_name,
+        (SELECT url FROM product_images pi WHERE pi.product_id = oi.product_id AND pi.is_primary = 1 LIMIT 1) as product_image
+       FROM order_items oi
+       JOIN products p ON oi.product_id = p.product_id
+       WHERE oi.order_id IN (?)`,
+      [orderIds]
+    );
+
+    // Group items by order_id
+    const itemsMap = {};
+    items.forEach((it) => {
+      if (!itemsMap[it.order_id]) itemsMap[it.order_id] = [];
+      itemsMap[it.order_id].push(it);
+    });
+
+    // Attach items to orders
+    rows.forEach((r) => {
+      r.items = itemsMap[r.order_id] || [];
+      r.items_count = r.items.length;
+    });
+  }
+
   const [cnt] = await db.query(
     `SELECT COUNT(*) as total FROM orders o WHERE ${where.join(" AND ")}`,
     params
@@ -345,16 +377,42 @@ exports.getMyOrders = async (req, res) => {
 exports.getOrderDetail = async (req, res) => {
   const userId = req.user.user_id || req.user.id;
   const { id } = req.params;
+
+  console.log(`[DEBUG] getOrderDetail - ID: ${id}, UserID: ${userId}`);
+  console.log(`[DEBUG] req.user payload:`, req.user);
+
   const [rows] = await db.query(
-    `SELECT * FROM orders WHERE order_id = ? AND user_id = ? LIMIT 1`,
+    `SELECT o.*, s.name as store_name 
+     FROM orders o 
+     LEFT JOIN stores s ON o.store_id = s.store_id
+     WHERE o.order_id = ? AND o.user_id = ? LIMIT 1`,
     [id, userId]
   );
-  if (!rows.length) return res.status(404).json({ message: "Order not found" });
+  
+  if (!rows.length) {
+    console.log(`[DEBUG] Order not found in DB for ID ${id} and UserID ${userId}`);
+    // Check if order exists at all (for diagnosis)
+    const [check] = await db.query("SELECT * FROM orders WHERE order_id = ?", [id]);
+    if (check.length) {
+        console.log(`[DEBUG] Order EXISTS but belongs to UserID ${check[0].user_id}`);
+    } else {
+        console.log(`[DEBUG] Order ID ${id} does NOT exist at all`);
+    }
+    return res.status(404).json({ message: "Order not found" });
+  }
+
   const order = rows[0];
+  
+  // Fetch items with images
   const [items] = await db.query(
-    `SELECT * FROM order_items WHERE order_id = ?`,
+    `SELECT oi.*, p.name as product_name, p.slug as product_slug,
+      (SELECT url FROM product_images pi WHERE pi.product_id = oi.product_id AND pi.is_primary = 1 LIMIT 1) as product_image
+     FROM order_items oi
+     JOIN products p ON oi.product_id = p.product_id
+     WHERE oi.order_id = ?`,
     [id]
   );
+  
   const [ship] = await db.query(
     `SELECT * FROM order_shipping WHERE order_id = ?`,
     [id]

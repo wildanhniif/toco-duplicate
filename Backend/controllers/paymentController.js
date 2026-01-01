@@ -306,6 +306,8 @@ exports.notification = async (req, res) => {
 
 exports.getStatus = async (req, res) => {
   const { order_code } = req.params;
+  // ... existing implementation ...
+  // (Leaving this as is if needed by other things, but sync is better)
   if (!order_code) {
     return res.status(400).json({ message: "order_code is required" });
   }
@@ -323,5 +325,129 @@ exports.getStatus = async (req, res) => {
   } catch (e) {
     console.error(e?.response?.data || e);
     return res.status(500).json({ message: "Failed to fetch status" });
+  }
+};
+
+exports.syncPaymentStatus = async (req, res) => {
+  const userId = req.user.user_id || req.user.id;
+  const { order_id } = req.params;
+
+  try {
+    // 1. Get Order
+    const [orders] = await db.query(
+      "SELECT order_id, order_number, status, payment_status FROM orders WHERE order_id = ? AND user_id = ? LIMIT 1",
+      [order_id, userId]
+    );
+    if (!orders.length) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    const order = orders[0];
+    const orderNumber = order.order_number || order.order_code; // Handle consistent naming (order_code vs order_number)
+
+    // 2. Call Midtrans Status API
+    const { base64ServerKey, statusBaseUrl } = getMidtransConfig();
+    const url = `${statusBaseUrl}/${encodeURIComponent(orderNumber)}/status`;
+    
+    let midtransData;
+    try {
+        const { data } = await axios.get(url, {
+        headers: {
+            Accept: "application/json",
+            Authorization: `Basic ${base64ServerKey}`,
+        },
+        timeout: 15000,
+        });
+        midtransData = data;
+    } catch (apiError) {
+        if (apiError.response && apiError.response.status === 404) {
+             return res.status(404).json({ message: "Transaction not found in Midtrans" });
+        }
+        throw apiError;
+    }
+
+    const { transaction_status, fraud_status, transaction_id, payment_type, gross_amount } = midtransData;
+
+    // 3. Map Status
+    const statusMap = mapTransactionToStatuses(transaction_status, fraud_status);
+    const paymentStatusVal = mapTransactionToPaymentStatus(transaction_status);
+
+    // 4. Update Database
+    // Update Order
+    await db.query(
+      `UPDATE orders
+       SET status = ?, payment_status = ?
+       WHERE order_id = ?`,
+      [statusMap.order_status, statusMap.payment_status, order.order_id]
+    );
+
+    // Update or Insert Payment
+    const rawResponse = JSON.stringify(midtransData);
+    const [paymentRows] = await db.query(
+      "SELECT payment_id FROM payments WHERE order_id = ? LIMIT 1",
+      [order.order_id]
+    );
+
+    if (paymentRows.length) {
+      await db.query(
+        `UPDATE payments
+         SET payment_status = ?, provider = 'midtrans', payment_type = ?, gross_amount = ?,
+             transaction_id = ?, transaction_time = ?, raw_response = ?, status_message = ?, updated_at = NOW()
+         WHERE payment_id = ?`,
+        [
+          paymentStatusVal,
+          payment_type || null,
+          gross_amount ? Number(gross_amount) : 0,
+          transaction_id || null,
+          midtransData.transaction_time || null,
+          rawResponse,
+          midtransData.status_message || null,
+          paymentRows[0].payment_id,
+        ]
+      );
+    } else {
+        // Insert if missing
+         await db.query(
+        `INSERT INTO payments (
+           order_id, payment_code, provider, payment_type, payment_status,
+           gross_amount, currency, transaction_id, transaction_time,
+           raw_response, status_message
+         ) VALUES (?, ?, 'midtrans', ?, ?, ?, 'IDR', ?, ?, ?, ?)`,
+        [
+          order.order_id,
+          orderNumber,
+          payment_type || null,
+          paymentStatusVal,
+          gross_amount ? Number(gross_amount) : 0,
+          transaction_id || null,
+          midtransData.transaction_time || null,
+          rawResponse,
+          midtransData.status_message || null,
+        ]
+      );
+    }
+
+    // Log if changed
+    if (order.status !== statusMap.order_status) {
+        await db.query(
+        `INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, note)
+            VALUES (?, ?, ?, 'user_sync', ?)`,
+        [
+            order.order_id,
+            order.status,
+            statusMap.order_status,
+            `Manual Sync: ${transaction_status}`,
+        ]
+        );
+    }
+
+    return res.json({ 
+        message: "Status synced", 
+        status: statusMap.order_status, 
+        payment_status: statusMap.payment_status 
+    });
+
+  } catch (e) {
+    console.error("Sync Error:", e?.response?.data || e);
+    return res.status(500).json({ message: "Failed to sync status" });
   }
 };

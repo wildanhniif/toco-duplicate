@@ -10,6 +10,8 @@ router.get('/', bannerController.getBanners);
 // Admin
 router.get('/admin', protect, isAdmin, bannerController.getAllBannersAdmin);
 router.post('/', protect, isAdmin, bannerController.createBanner);
+router.post('/batch', protect, isAdmin, bannerController.createBatchBanners);
+router.post('/batch', protect, isAdmin, bannerController.createBatchBanners);
 router.put('/:id', protect, isAdmin, bannerController.updateBanner);
 router.delete('/:id', protect, isAdmin, bannerController.deleteBanner);
 

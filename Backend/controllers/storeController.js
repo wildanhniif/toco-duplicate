@@ -45,6 +45,44 @@ const getStoreBySlug = async (req, res) => {
   }
 };
 
+// Public: search stores by name
+const searchStores = async (req, res) => {
+  try {
+    const { q, limit = 5 } = req.query;
+    
+    // If no query, return empty list (or popular stores if we wanted)
+    if (!q) {
+      return res.status(200).json({ stores: [] });
+    }
+
+    console.log("Searching stores with query:", q); // DEBUG LOG
+
+    const sql = `
+      SELECT
+        s.store_id,
+        s.name,
+        s.slug,
+        s.city,
+        s.district,
+        s.profile_image_url,
+        s.rating_average,
+        s.is_verified,
+        (SELECT COUNT(*) FROM products p WHERE p.store_id = s.store_id AND p.status = 'active' AND p.deleted_at IS NULL) as product_count
+      FROM stores s
+      WHERE s.name LIKE ? AND s.deleted_at IS NULL AND s.is_active = 1
+      LIMIT ?
+    `;
+
+    const [rows] = await db.query(sql, [`%${q}%`, parseInt(limit)]);
+
+    return res.status(200).json({ stores: rows });
+  } catch (error) {
+    console.error("Error searching stores:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
 module.exports = {
   getStoreBySlug,
+  searchStores,
 };

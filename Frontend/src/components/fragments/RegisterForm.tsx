@@ -120,56 +120,64 @@ export default function RegisterForm() {
         />
         {fieldErrors.fullName && <p className="mt-1 text-sm text-red-500">{fieldErrors.fullName}</p>}
       </div>
-      <div className="mb-4">
-        <Label htmlFor="phone-number" className="block mb-3">
-          Nomor Telepon
-        </Label>
-        <Input
-          type="tel"
-          name="phoneNumber"
-          id="phone-number"
-          placeholder="Masukan nomor telepon anda"
-          className="h-11"
-          value={phoneNumber}
-          onChange={(event) => setPhoneNumber(event.target.value)}
-        />
-        {fieldErrors.phoneNumber && <p className="mt-1 text-sm text-red-500">{fieldErrors.phoneNumber}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <Label htmlFor="phone-number" className="block mb-3">
+            Nomor Telepon
+          </Label>
+          <Input
+            type="tel"
+            name="phoneNumber"
+            id="phone-number"
+            placeholder="Masukan nomor telepon anda"
+            className="h-11"
+            value={phoneNumber}
+            onChange={(event) => setPhoneNumber(event.target.value)}
+          />
+          {fieldErrors.phoneNumber && <p className="mt-1 text-sm text-red-500">{fieldErrors.phoneNumber}</p>}
+        </div>
+        <div>
+          <Label htmlFor="email-address" className="block mb-3">
+            Email address
+          </Label>
+          <Input
+            type="email"
+            name="email"
+            id="email-address"
+            placeholder="Masukan email anda"
+            className="h-11"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          {fieldErrors.email && <p className="mt-1 text-sm text-red-500">{fieldErrors.email}</p>}
+        </div>
       </div>
-      <div className="mb-4">
-        <Label htmlFor="email-address" className="block mb-3">
-          Email address
-        </Label>
-        <Input
-          type="email"
-          name="email"
-          id="email-address"
-          placeholder="Masukan email anda"
-          className="h-11"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        {fieldErrors.email && <p className="mt-1 text-sm text-red-500">{fieldErrors.email}</p>}
-      </div>
-      <InputGroupPassword
-        name="password"
-        id="password"
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-      >
-        Password
-      </InputGroupPassword>
-      {fieldErrors.password && <p className="-mt-4 mb-4 text-sm text-red-500">{fieldErrors.password}</p>}
-      
-      <div className="mt-4">
-        <InputGroupPassword
-          name="confirmPassword"
-          id="confirmPassword"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-        >
-          Konfirmasi Password
-        </InputGroupPassword>
-        {fieldErrors.confirmPassword && <p className="-mt-4 mb-4 text-sm text-red-500">{fieldErrors.confirmPassword}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+           <InputGroupPassword
+            name="password"
+            id="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          >
+            Password
+          </InputGroupPassword>
+          {fieldErrors.password && <p className="-mt-4 mb-4 text-sm text-red-500">{fieldErrors.password}</p>}
+        </div>
+        
+        <div>
+          <InputGroupPassword
+            name="confirmPassword"
+            id="confirmPassword"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          >
+            Konfirmasi Password
+          </InputGroupPassword>
+          {fieldErrors.confirmPassword && <p className="-mt-4 mb-4 text-sm text-red-500">{fieldErrors.confirmPassword}</p>}
+        </div>
       </div>
       
       <div className="mt-4">

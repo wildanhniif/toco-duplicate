@@ -12,6 +12,36 @@ export default function ShippingInfoSection({
   formData,
   setFormData,
 }: ShippingInfoSectionProps) {
+  const handleNumberInput = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string,
+    isDimension = false
+  ) => {
+    const val = e.target.value;
+    if (val === "") {
+      if (isDimension) {
+        setFormData((prev: any) => ({
+          ...prev,
+          dimensions: { ...prev.dimensions, [field]: "" },
+        }));
+      } else {
+        setFormData((prev: any) => ({ ...prev, [field]: "" }));
+      }
+      return;
+    }
+    const num = parseFloat(val);
+    if (!isNaN(num) && num < 0) return; // Prevent negative
+
+    if (isDimension) {
+      setFormData((prev: any) => ({
+        ...prev,
+        dimensions: { ...prev.dimensions, [field]: val },
+      }));
+    } else {
+      setFormData((prev: any) => ({ ...prev, [field]: val }));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Berat Produk */}
@@ -22,13 +52,9 @@ export default function ShippingInfoSection({
         <Input
           id="weight"
           type="number"
+          min="0"
           value={formData.weight_gram}
-          onChange={(e) =>
-            setFormData((prev: any) => ({
-              ...prev,
-              weight_gram: e.target.value,
-            }))
-          }
+          onChange={(e) => handleNumberInput(e, "weight_gram")}
           placeholder="500"
           required
         />
@@ -46,13 +72,9 @@ export default function ShippingInfoSection({
           <div>
             <Input
               type="number"
+              min="0"
               value={formData.dimensions.length}
-              onChange={(e) =>
-                setFormData((prev: any) => ({
-                  ...prev,
-                  dimensions: { ...prev.dimensions, length: e.target.value },
-                }))
-              }
+              onChange={(e) => handleNumberInput(e, "length", true)}
               placeholder="Panjang"
               required
             />
@@ -60,13 +82,9 @@ export default function ShippingInfoSection({
           <div>
             <Input
               type="number"
+              min="0"
               value={formData.dimensions.width}
-              onChange={(e) =>
-                setFormData((prev: any) => ({
-                  ...prev,
-                  dimensions: { ...prev.dimensions, width: e.target.value },
-                }))
-              }
+              onChange={(e) => handleNumberInput(e, "width", true)}
               placeholder="Lebar"
               required
             />
@@ -74,13 +92,9 @@ export default function ShippingInfoSection({
           <div>
             <Input
               type="number"
+              min="0"
               value={formData.dimensions.height}
-              onChange={(e) =>
-                setFormData((prev: any) => ({
-                  ...prev,
-                  dimensions: { ...prev.dimensions, height: e.target.value },
-                }))
-              }
+              onChange={(e) => handleNumberInput(e, "height", true)}
               placeholder="Tinggi"
               required
             />

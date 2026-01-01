@@ -12,7 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SlidersHorizontal, LayoutGrid, List } from "lucide-react";
+import { SlidersHorizontal, LayoutGrid, List, ChevronRight, PackageX } from "lucide-react";
+import CategoryTree from "./sections/CategoryTree";
+import StoreList from "./sections/StoreList";
+import Image from "next/image";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -152,143 +155,46 @@ export default function ProductsView() {
       ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5"
       : "grid-cols-1";
 
+  // Breadcrumbs
+  let crumbs = [{ label: "Beranda", href: "/" }];
+  if (categoryId) crumbs.push({ label: "Kategori", href: "#" }); // Idealnya fetch nama category
+  if (query) crumbs.push({ label: `"${query}"`, href: "#" });
+  if (!categoryId && !query) crumbs.push({ label: "Semua Produk", href: "/products" });
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="w-full max-w-[1440px] mx-auto px-[5%] pt-28 pb-12">
-        <div className="mb-4">
-          <h1 className="text-xl lg:text-2xl font-semibold text-gray-900">
-            {title}
-          </h1>
-          {query && (
-            <p className="mt-1 text-xs text-gray-600">
-              Menampilkan {totalDisplayed} dari {totalFound} produk yang cocok.
-            </p>
-          )}
+    <main className="min-h-screen bg-white">
+      <div className="w-full max-w-[1440px] mx-auto px-[5%] pt-40 pb-12">
+        
+        {/* Breadcrumb Section */}
+        <div className="mb-6 text-xs text-gray-500 flex items-center gap-2">
+            {crumbs.map((c, i) => (
+                <div key={i} className="flex items-center gap-2">
+                     <a href={c.href} className="hover:text-yellow-600 transition-colors">{c.label}</a>
+                     {i < crumbs.length - 1 && <span>/</span>}
+                </div>
+            ))}
         </div>
 
-        {loading && <p className="text-gray-600 text-sm">Memuat produk...</p>}
-
-        {!loading && error && (
-          <p className="text-red-600 text-sm mb-2">{error}</p>
+        {/* Store Suggestions (Only if query present) */}
+        {query && (
+            <div className="mb-8">
+                <StoreList query={query} />
+            </div>
         )}
 
-        {!loading && !error && totalFound === 0 && (
-          <p className="text-gray-600 text-sm">
-            Belum ada produk yang cocok dengan filter ini.
-          </p>
-        )}
-
-        {!loading && !error && totalFound > 0 && (
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 lg:gap-10">
-            {/* Sidebar Filter */}
-            <aside className="hidden lg:block">
-              <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-6">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-yellow-500" />
-                  <h2 className="text-sm font-semibold text-gray-900">
-                    Filter
-                  </h2>
-                </div>
-
-                {/* Filter Harga */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 mb-2">
-                    Harga
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="Terendah"
-                      value={priceMin}
-                      onChange={(e) => setPriceMin(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                    <span className="text-xs text-gray-400">-</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="Tertinggi"
-                      value={priceMax}
-                      onChange={(e) => setPriceMax(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Filter Kondisi */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 mb-2">
-                    Kondisi
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(
-                      [
-                        { label: "Semua", value: "all" },
-                        { label: "Baru", value: "new" },
-                        { label: "Bekas", value: "used" },
-                      ] as const
-                    ).map((item) => (
-                      <button
-                        key={item.value}
-                        type="button"
-                        onClick={() => setConditionFilter(item.value)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          conditionFilter === item.value
-                            ? "border-yellow-400 bg-yellow-50 text-yellow-600"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Filter Lokasi */}
-                {uniqueCities.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">
-                      Lokasi
-                    </p>
-                    <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-                      {uniqueCities.map((cityName) => (
-                        <label
-                          key={cityName}
-                          className="flex items-center gap-2 text-xs text-gray-700"
-                        >
-                          <Checkbox
-                            checked={selectedCities.includes(cityName)}
-                            onCheckedChange={(checked: boolean) => {
-                              setSelectedCities((prev) =>
-                                checked
-                                  ? [...prev, cityName]
-                                  : prev.filter((c) => c !== cityName)
-                              );
-                            }}
-                          />
-                          <span className="line-clamp-1">{cityName}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </aside>
-
-            {/* Main Content */}
-            <section className="flex flex-col gap-4">
-              {/* Top Bar */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-xs text-gray-600">
-                  <p>
-                    {totalDisplayed} produk
-                    {totalFound > totalDisplayed &&
-                      ` dari ${totalFound} hasil awal`}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+           <div>
+             <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
+                {query ? query : "Semua Produk"}
+             </h1>
+             <p className="text-sm text-gray-500 mt-1">
+               {totalDisplayed} dari {totalFound} produk
+             </p>
+           </div>
+           
+           {/* Sort & View Mode - Desktop */}
+           <div className="flex items-center gap-3">
+                 <span className="text-sm text-gray-600 hidden sm:inline">Urutkan Berdasarkan</span>
                   <Select
                     value={sortBy}
                     onValueChange={(value) =>
@@ -301,72 +207,208 @@ export default function ProductsView() {
                       )
                     }
                   >
-                    <SelectTrigger className="h-9 w-40 text-xs">
-                      <SelectValue placeholder="Urutkan" />
+                    <SelectTrigger className="h-9 w-[180px] text-sm border-none shadow-none font-semibold text-blue-900 bg-transparent flex flex-row-reverse justify-end gap-2 px-0 hover:bg-transparent focus:ring-0">
+                      <SelectValue placeholder="Paling Sesuai" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="relevance">Paling relevan</SelectItem>
+                    <SelectContent align="end">
+                      <SelectItem value="relevance">Paling Sesuai</SelectItem>
                       <SelectItem value="price_asc">Harga Terendah</SelectItem>
-                      <SelectItem value="price_desc">
-                        Harga Tertinggi
-                      </SelectItem>
+                      <SelectItem value="price_desc">Harga Tertinggi</SelectItem>
                       <SelectItem value="stock_desc">Stok Terbanyak</SelectItem>
                     </SelectContent>
                   </Select>
 
-                  <div className="hidden sm:inline-flex items-center rounded-full border border-gray-200 bg-white p-1">
+                   <div className="hidden sm:inline-flex items-center rounded-md border border-gray-200 bg-white ml-2">
                     <button
                       type="button"
                       onClick={() => setViewMode("grid")}
-                      className={`inline-flex items-center justify-center rounded-full px-2 py-1 text-xs ${
-                        viewMode === "grid"
-                          ? "bg-yellow-400 text-black"
-                          : "text-gray-500"
+                      className={`p-2 transition-colors ${
+                        viewMode === "grid" ? "text-yellow-500" : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
-                      <LayoutGrid className="w-4 h-4" />
+                      <LayoutGrid className="w-5 h-5" />
                     </button>
-                    <button
+                    <div className="w-[1px] h-4 bg-gray-200"></div>
+                     <button
                       type="button"
                       onClick={() => setViewMode("list")}
-                      className={`inline-flex items-center justify-center rounded-full px-2 py-1 text-xs ${
-                        viewMode === "list"
-                          ? "bg-yellow-400 text-black"
-                          : "text-gray-500"
+                      className={`p-2 transition-colors ${
+                        viewMode === "list" ? "text-yellow-500" : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
-                      <List className="w-4 h-4" />
+                      <List className="w-5 h-5" />
                     </button>
                   </div>
-                </div>
-              </div>
+           </div>
+        </div>
 
-              {/* Results */}
-              {totalDisplayed === 0 ? (
-                <p className="text-gray-600 text-sm">
-                  Tidak ada produk yang cocok dengan filter saat ini.
-                </p>
-              ) : (
-                <div className={`grid gap-4 ${gridColumnsClass}`}>
-                  {filteredProducts.map((product) => (
-                    <CardProduct
-                      key={product.product_id}
-                      id={product.product_id}
-                      slug={product.slug}
-                      title={product.name}
-                      city={product.city ?? "Kota Jakarta"}
-                      stock={product.stock_quantity ?? 0}
-                      price={product.price ?? 0}
-                      img={product.primary_image || "/iphone-product.webp"}
-                      discountPercentage={product.discount_percentage}
-                      variant={viewMode}
-                    />
-                  ))}
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-8">
+            {/* Sidebar Filter */}
+            <aside className="hidden lg:block space-y-8">
+                {/* Category Tree */}
+                <CategoryTree currentCategoryId={categoryId ? Number(categoryId) : undefined} />
+
+                <div className="w-full h-[1px] bg-gray-100" />
+                
+                 {/* Filter Harga */}
+                 <div>
+                  <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-gray-900 border-l-4 border-yellow-500 pl-2">
+                        Filter Harga
+                      </h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-xs text-gray-500 font-bold">Rp</span>
+                         <Input
+                          type="number"
+                          placeholder="Harga Terendah"
+                          value={priceMin}
+                          onChange={(e) => setPriceMin(e.target.value)}
+                          className="h-9 pl-9 text-sm bg-gray-50 border-gray-200"
+                        />
+                    </div>
+                     <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-xs text-gray-500 font-bold">Rp</span>
+                        <Input
+                          type="number"
+                          placeholder="Harga Tertinggi"
+                          value={priceMax}
+                          onChange={(e) => setPriceMax(e.target.value)}
+                         className="h-9 pl-9 text-sm bg-gray-50 border-gray-200"
+                        />
+                    </div>
+                  </div>
                 </div>
+
+                 <div className="w-full h-[1px] bg-gray-100" />
+
+                 {/* Kondisi */}
+                <div>
+                   <h3 className="text-sm font-bold text-gray-900 border-l-4 border-yellow-500 pl-2 mb-3">
+                        Kondisi Barang
+                   </h3>
+                   <div className="flex items-center gap-2">
+                        {(["new", "used"] as const).map(cond => (
+                             <button
+                                key={cond}
+                                onClick={() => setConditionFilter(cond === conditionFilter ? "all" : cond)}
+                                className={`flex-1 py-1.5 px-3 rounded-full border text-sm transition-all ${
+                                    conditionFilter === cond 
+                                    ? "border-yellow-500 bg-yellow-50 text-yellow-700 font-medium" 
+                                    : "border-gray-200 text-gray-600 hover:border-gray-300"
+                                }`}
+                             >
+                                {cond === "new" ? "Baru" : "Bekas"}
+                             </button>
+                        ))}
+                   </div>
+                </div>
+
+                 <div className="w-full h-[1px] bg-gray-100" />
+
+                {/* Filter Lokasi */}
+                {uniqueCities.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 border-l-4 border-yellow-500 pl-2 mb-3">
+                       Filter Lokasi
+                    </h3>
+                    <div className="space-y-2">
+                      {uniqueCities.slice(0, 5).map((cityName) => (
+                        <label
+                          key={cityName}
+                          className="flex items-center gap-3 cursor-pointer group"
+                        >
+                          <Checkbox
+                            checked={selectedCities.includes(cityName)}
+                            onCheckedChange={(checked: boolean) => {
+                              setSelectedCities((prev) =>
+                                checked
+                                  ? [...prev, cityName]
+                                  : prev.filter((c) => c !== cityName)
+                              );
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                          />
+                          <span className="text-sm text-gray-600 group-hover:text-gray-900">{cityName}</span>
+                        </label>
+                      ))}
+                      {uniqueCities.length > 5 && (
+                          <button className="text-sm font-semibold text-blue-800 flex items-center gap-1 hover:underline mt-2">
+                             Lihat Lokasi Lainnya <ChevronRight className="w-3 h-3" />
+                          </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                 <div className="w-full h-[1px] bg-gray-100" />
+
+                 {/* Tipe Transaksi (Example) */}
+                 <div>
+                    <h3 className="text-sm font-bold text-gray-900 border-l-4 border-yellow-500 pl-2 mb-3">
+                       Tipe Transaksi
+                    </h3>
+                    <div className="space-y-2">
+                         <label className="flex items-center gap-2 cursor-pointer">
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${true ? "border-yellow-400" : "border-gray-300"}`}>
+                                {true && <div className="w-2 h-2 rounded-full bg-yellow-400" />}
+                            </div>
+                            <span className="text-sm text-gray-700">Semua</span>
+                         </label>
+                         <label className="flex items-center gap-2 cursor-pointer opacity-60">
+                             <div className="w-4 h-4 rounded-full border border-gray-300" />
+                            <span className="text-sm text-gray-700">Melalui Toco</span>
+                         </label>
+                           <label className="flex items-center gap-2 cursor-pointer opacity-60">
+                             <div className="w-4 h-4 rounded-full border border-gray-300" />
+                            <span className="text-sm text-gray-700">COD (Bayar di Tempat)</span>
+                         </label>
+                    </div>
+
+                 </div>
+
+            </aside>
+
+            {/* Main Content Products */}
+            <section className="flex flex-col gap-4">
+              {loading && <p className="text-gray-600 text-sm">Memuat produk...</p>}
+              {!loading && error && <p className="text-red-600 text-sm mb-2">{error}</p>}
+              {!loading && !error && totalFound === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                     <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                        <PackageX className="w-10 h-10 text-gray-300" />
+                     </div>
+                     <h3 className="text-lg font-semibold text-gray-900">Tidak ada produk ditemukan</h3>
+                     <p className="text-gray-500 text-sm max-w-xs mx-auto">Coba kurangi filter atau gunakan kata kunci lain.</p>
+                  </div>
               )}
+              
+               {!loading && !error && totalFound > 0 && (
+                 <>
+                   {/* Product Grid */}
+                  <div className={`grid gap-4 ${gridColumnsClass}`}>
+                    {filteredProducts.map((product) => (
+                        <CardProduct
+                        key={product.product_id}
+                        id={product.product_id}
+                        slug={product.slug}
+                        title={product.name}
+                        city={product.city ?? "Kota Jakarta"}
+                        stock={product.stock_quantity ?? 0}
+                        price={product.price ?? 0}
+                        img={product.primary_image || "/iphone-product.webp"}
+                        discountPercentage={product.discount_percentage}
+                        variant={viewMode}
+                        />
+                    ))}
+                    </div>
+                 </>
+               )}
             </section>
-          </div>
-        )}
+        </div>
+
       </div>
     </main>
   );

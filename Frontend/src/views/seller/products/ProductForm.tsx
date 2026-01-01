@@ -437,25 +437,52 @@ export default function ProductFormView({ productId }: ProductFormViewProps) {
         };
       } else {
         // Marketplace
-        payload.price = parseFloat(formData.price);
-        payload.discount_percentage =
-          parseInt(formData.discount_percentage) || 0;
-        payload.stock_quantity = parseInt(formData.stock_quantity);
+        // Marketplace
+        payload.price = parseFloat(formData.price) || 0;
+        payload.discount_percentage = parseInt(formData.discount_percentage) || 0;
+        payload.stock_quantity = parseInt(formData.stock_quantity) || 0;
         payload.sku = formData.sku;
         payload.condition = formData.condition;
         payload.brand = formData.brand;
-        payload.weight_gram = parseInt(formData.weight_gram);
+        payload.weight_gram = parseInt(formData.weight_gram) || 0;
         payload.dimensions = {
-          length: parseInt(formData.dimensions.length),
-          width: parseInt(formData.dimensions.width),
-          height: parseInt(formData.dimensions.height),
+          length: parseInt(formData.dimensions.length) || 0,
+          width: parseInt(formData.dimensions.width) || 0,
+          height: parseInt(formData.dimensions.height) || 0,
         };
         payload.is_preorder = formData.is_preorder;
         payload.use_store_courier = formData.use_store_courier;
         payload.insurance = formData.insurance;
 
-        if (formData.has_variants && formData.variants.length > 0) {
-          payload.variants = formData.variants;
+        if (formData.variants && formData.variants.length > 0) {
+           // 1. Group for "variants" (Attributes definitions)
+           const groupedVariants = new Map();
+           formData.variants.forEach((v: any) => {
+               if (!groupedVariants.has(v.variant_name)) {
+                   groupedVariants.set(v.variant_name, new Set());
+               }
+               groupedVariants.get(v.variant_name).add(v.variant_value);
+           });
+       
+           payload.variants = Array.from(groupedVariants.entries()).map(([name, values]) => ({
+               name,
+               options: Array.from(values as Set<string>)
+           }));
+       
+           // 2. Map for "skus" (Actual Inventory Items)
+           payload.skus = formData.variants.map((v: any, index: number) => ({
+               sku_code: v.sku || `${formData.sku || 'SKU'}-${Date.now()}-${index}`,
+               price: parseInt(v.price) || payload.price,
+               stock_quantity: parseInt(v.stock) || 0,
+               option_map: {
+                   [v.variant_name]: v.variant_value
+               },
+               weight_gram: payload.weight_gram, // Inherit from main product
+               dimensions: payload.dimensions
+           }));
+
+            // Sync total stock
+            payload.stock_quantity = payload.skus.reduce((acc: number, sku: any) => acc + sku.stock_quantity, 0);
         }
       }
 

@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { MapPin, Package, CheckCircle2, Star, Share2 } from "lucide-react";
+import { MapPin, Package, CheckCircle2, Star, Share2, X, ZoomIn } from "lucide-react";
 import ProductCarousel from "@/components/composites/Carousel/ProductCarousel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import ProductVariantSelector from "@/components/composites/Product/ProductVariantSelector";
 import { toast } from "sonner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -21,7 +22,7 @@ interface ProductVariant {
   variant_id: number;
   variant_name: string;
   variant_value: string;
-  price_adjustment: number;
+  price: number; // Changed from price_adjustment to absolute price
   image_url: string | null;
   stock_quantity: number;
   sku: string | null;
@@ -119,6 +120,9 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
   const [addingToCart, setAddingToCart] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState<string | null>(null);
+  
+  // Lightbox state
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -322,8 +326,11 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
     product.discount_percentage > 0;
 
   const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId);
-  const variantPriceAdjustment = selectedVariant?.price_adjustment || 0;
-  const currentPrice = product.price + variantPriceAdjustment;
+  // Use specific variant price if available, otherwise base price
+  const currentPrice = (selectedVariant && selectedVariant.price > 0) 
+    ? selectedVariant.price 
+    : product.price;
+
   const originalPrice = hasDiscount
     ? Math.round(currentPrice / (1 - (product.discount_percentage ?? 0) / 100))
     : null;
@@ -369,18 +376,46 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] gap-10 lg:gap-12">
           {/* Left: Image + Thumbnails */}
           <div className="space-y-4 lg:flex lg:flex-col">
-            <Card className="overflow-hidden rounded-2xl p-0 border-none shadow-none bg-transparent">
-              <div className="relative w-full aspect-square bg-gray-100 rounded-2xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl p-0 border-none shadow-none bg-transparent group">
+              <div 
+                className="relative w-full aspect-square bg-white rounded-2xl overflow-hidden cursor-zoom-in"
+                onClick={() => setIsLightboxOpen(true)}
+              >
                 <Image
                   src={mainImageSrc}
                   alt={product.name}
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover object-center rounded-2xl"
+                  className="object-contain object-center rounded-2xl group-hover:scale-105 transition-transform duration-300"
                   loading="eager"
                 />
+                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <ZoomIn className="w-10 h-10 text-white drop-shadow-md" />
+                </div>
               </div>
             </Card>
+            
+            {/* Simple Lightbox Modal */}
+            <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
+              <DialogContent className="max-w-4xl w-full p-0 bg-transparent border-none shadow-none overflow-hidden flex items-center justify-center">
+                 <div className="relative w-full h-[80vh] flex items-center justify-center">
+                    <button 
+                      onClick={() => setIsLightboxOpen(false)}
+                      className="absolute top-2 right-2 z-50 p-2 bg-black/50 rounded-full text-white hover:bg-black/70"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                    <div className="relative w-full h-full">
+                       <Image
+                          src={mainImageSrc}
+                          alt={product.name}
+                          fill
+                          className="object-contain"
+                       />
+                    </div>
+                 </div>
+              </DialogContent>
+            </Dialog>
 
             {product.images && product.images.length > 1 && (
               <div className="mt-3 grid grid-cols-4 sm:grid-cols-5 gap-2">

@@ -11,6 +11,7 @@ import {
   Layers,
   Settings,
   LogOut,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -57,9 +58,14 @@ export default function AdminSidebar() {
     <div className="fixed top-0 left-0 h-screen w-64 bg-slate-900 text-white shadow-lg z-40 flex flex-col justify-between">
       <div>
         {/* Header */}
-        <div className="p-6 border-b border-slate-700">
+        <div className="p-6 border-b border-slate-700 flex justify-between items-center">
           <Link href="/admin/dashboard">
             <h1 className="text-xl font-bold tracking-wider">ADMIN PANEL</h1>
+          </Link>
+          <Link href="/" target="_blank" title="Lihat Toko">
+             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white">
+                <ExternalLink className="h-5 w-5" />
+             </Button>
           </Link>
         </div>
 

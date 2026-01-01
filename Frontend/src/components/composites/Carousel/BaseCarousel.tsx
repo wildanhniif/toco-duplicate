@@ -2,10 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { Swiper } from "swiper/react";
-import { Autoplay, Navigation, Pagination } from "swiper/modules";
+import { Autoplay, Navigation, Pagination, EffectFade } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import "swiper/css/effect-fade";
 import { SwiperOptions } from "swiper/types";
 import CarouselButton from "./CarouselButton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -20,6 +21,8 @@ type BaseCarouselProps = {
   centeredSlides?: boolean;
   breakpoints?: SwiperOptions["breakpoints"];
   className?: string;
+  effect?: "slide" | "fade";
+  slidesPerView?: number | "auto";
 };
 
 export default function BaseCarousel(props: BaseCarouselProps) {
@@ -33,6 +36,8 @@ export default function BaseCarousel(props: BaseCarouselProps) {
     centeredSlides = false,
     breakpoints,
     className = "",
+    effect = "slide",
+    slidesPerView,
   } = props;
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
@@ -55,13 +60,15 @@ export default function BaseCarousel(props: BaseCarouselProps) {
   return (
     <div className={`relative w-full mx-auto group ${className}`}>
       <Swiper
-        modules={[Navigation, Pagination, Autoplay]}
+        modules={[Navigation, Pagination, Autoplay, EffectFade]}
         pagination={pagination ? { clickable: true } : false}
-        autoplay={autoplay ? { delay: 5000 } : false}
+        autoplay={autoplay ? { delay: 5000, disableOnInteraction: false } : false}
         loop={loop}
         spaceBetween={spaceBetween}
         centeredSlides={centeredSlides}
         breakpoints={breakpoints}
+        slidesPerView={slidesPerView}
+        effect={effect}
         navigation={{
           prevEl: prevRef.current,
           nextEl: nextRef.current,

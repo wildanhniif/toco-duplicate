@@ -27,10 +27,15 @@ export default function MarketplaceFields({
       .split(",")
       .map((v) => v.trim())
       .filter((v) => v);
+    
+    // Default price to product price if set, else 0
+    const defaultPrice = formData.price ? parseInt(formData.price) : 0;
+
     const newVariants = values.map((value) => ({
       variant_name: variantType,
       variant_value: value,
       stock: 0,
+      price: defaultPrice,
       sku: "",
     }));
 
@@ -48,6 +53,24 @@ export default function MarketplaceFields({
       ...prev,
       variants: prev.variants.filter((_: any, i: number) => i !== index),
     }));
+  };
+
+  const handleNumberInput = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string,
+    isFloat = false
+  ) => {
+    const val = e.target.value;
+    // Allow empty string to let user delete content
+    if (val === "") {
+      setFormData((prev: any) => ({ ...prev, [field]: "" }));
+      return;
+    }
+    
+    const num = isFloat ? parseFloat(val) : parseInt(val);
+    if (!isNaN(num) && num < 0) return; // Prevent negative inputs
+    
+    setFormData((prev: any) => ({ ...prev, [field]: val }));
   };
 
   return (
@@ -151,37 +174,76 @@ export default function MarketplaceFields({
 
         {formData.variants.length > 0 && (
           <div className="space-y-2">
+            <div className="grid grid-cols-12 gap-2 mb-2 px-3 text-sm font-medium text-gray-500">
+              <div className="col-span-4">Varian</div>
+              <div className="col-span-3">Harga</div>
+              <div className="col-span-3">Stok</div>
+              <div className="col-span-2"></div>
+            </div>
+
             {formData.variants.map((variant: any, index: number) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-3 border rounded-lg"
+                className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg bg-white"
               >
-                <div className="flex-1">
-                  <span className="font-medium">{variant.variant_name}:</span>{" "}
-                  {variant.variant_value}
+                <div className="col-span-4 flex-1">
+                  <span className="font-medium text-gray-900">{variant.variant_name}:</span>{" "}
+                  <span className="text-gray-600">{variant.variant_value}</span>
                 </div>
-                <Input
-                  type="number"
-                  placeholder="Stok"
-                  value={variant.stock}
-                  onChange={(e) => {
-                    const newVariants = [...formData.variants];
-                    newVariants[index].stock = parseInt(e.target.value) || 0;
-                    setFormData((prev: any) => ({
-                      ...prev,
-                      variants: newVariants,
-                    }));
-                  }}
-                  className="w-24"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveVariant(index)}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
+                
+                <div className="col-span-3">
+                   <Input
+                    type="number"
+                    placeholder="Harga"
+                    min="0"
+                    value={variant.price}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val < 0) return;
+                      
+                      const newVariants = [...formData.variants];
+                      newVariants[index].price = isNaN(val) ? "" : val;
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        variants: newVariants,
+                      }));
+                    }}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="col-span-3">
+                   <Input
+                    type="number"
+                    placeholder="Stok"
+                    min="0"
+                    value={variant.stock}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val < 0) return;
+
+                      const newVariants = [...formData.variants];
+                      newVariants[index].stock = isNaN(val) ? 0 : val;
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        variants: newVariants,
+                      }));
+                    }}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="col-span-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 p-0 text-red-500 hover:bg-red-50"
+                    onClick={() => handleRemoveVariant(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -201,10 +263,9 @@ export default function MarketplaceFields({
             <Input
               id="price"
               type="number"
+              min="0"
               value={formData.price}
-              onChange={(e) =>
-                setFormData((prev: any) => ({ ...prev, price: e.target.value }))
-              }
+              onChange={(e) => handleNumberInput(e, "price")}
               placeholder="0"
               className="pl-10"
               required
@@ -219,16 +280,11 @@ export default function MarketplaceFields({
           <Input
             id="discount"
             type="number"
-            value={formData.discount_percentage}
-            onChange={(e) =>
-              setFormData((prev: any) => ({
-                ...prev,
-                discount_percentage: e.target.value,
-              }))
-            }
-            placeholder="0"
             min="0"
             max="100"
+            value={formData.discount_percentage}
+            onChange={(e) => handleNumberInput(e, "discount_percentage")}
+            placeholder="0"
           />
         </div>
       </div>
@@ -242,15 +298,10 @@ export default function MarketplaceFields({
           <Input
             id="stock"
             type="number"
-            value={formData.stock_quantity}
-            onChange={(e) =>
-              setFormData((prev: any) => ({
-                ...prev,
-                stock_quantity: e.target.value,
-              }))
-            }
-            placeholder="0"
             min="0"
+            value={formData.stock_quantity}
+            onChange={(e) => handleNumberInput(e, "stock_quantity")}
+            placeholder="0"
             required
             disabled={formData.variants.length > 0}
           />

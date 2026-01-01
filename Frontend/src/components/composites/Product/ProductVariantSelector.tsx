@@ -9,7 +9,7 @@ interface ProductVariant {
   variant_id: number;
   variant_name: string;
   variant_value: string;
-  price_adjustment: number;
+  price: number; // Changed from price_adjustment
   image_url: string | null;
   stock_quantity: number;
   sku: string | null;
@@ -68,7 +68,8 @@ export default function ProductVariantSelector({
             {groupVariants.map((variant) => {
               const isSelected = selectedVariantId === variant.variant_id;
               const isOutOfStock = variant.stock_quantity === 0;
-              const finalPrice = basePrice + variant.price_adjustment;
+              const variantPrice = variant.price || basePrice;
+              const diff = variantPrice - basePrice;
 
               return (
                 <button
@@ -108,11 +109,11 @@ export default function ProductVariantSelector({
                     {variant.variant_value}
                   </p>
 
-                  {/* Price Adjustment */}
-                  {variant.price_adjustment !== 0 && (
+                  {/* Price Difference or actual price if widely different */}
+                  {diff !== 0 && (
                     <p className="text-[10px] text-gray-500 text-center mt-1">
-                      {variant.price_adjustment > 0 ? "+" : ""}
-                      {formatPrice(variant.price_adjustment)}
+                      {diff > 0 ? "+" : ""}
+                      {formatPrice(diff)}
                     </p>
                   )}
 

@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -130,7 +131,8 @@ export default function OrderDetailPage() {
         return;
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
+      // Fix: Mapped to /api/orders/my/:id
+      const res = await fetch(`${API_BASE_URL}/api/orders/my/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -153,6 +155,30 @@ export default function OrderDetailPage() {
       fetchOrderDetail();
     }
   }, [orderId]);
+
+  const handleSyncStatus = async () => {
+    try {
+        const token = localStorage.getItem("auth_token");
+        const loadingToast = toast.loading("Memperbarui status...");
+        
+        const res = await fetch(`${API_BASE_URL}/api/payments/sync/${orderId}`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        toast.dismiss(loadingToast);
+
+        if (res.ok) {
+            toast.success("Status berhasil diperbarui");
+            fetchOrderDetail(); // Refresh data
+        } else {
+             const d = await res.json();
+             toast.error(d.message || "Gagal memperbarui status");
+        }
+    } catch(e) {
+        toast.error("Gagal koneksi ke server");
+    }
+  };
 
   const handleCopyOrderCode = () => {
     if (orderDetail?.order.order_code) {
@@ -266,15 +292,27 @@ export default function OrderDetailPage() {
               </div>
             </div>
 
-            {isUnpaid && (
-              <Button
-                onClick={handlePayNow}
-                className="bg-orange-500 hover:bg-orange-600"
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Bayar Sekarang
-              </Button>
-            )}
+            <div className="flex gap-2">
+                 {isUnpaid && (
+                    <Button
+                        variant="outline"
+                        onClick={handleSyncStatus}
+                        className="border-orange-500 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                    >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Cek Payment
+                    </Button>
+                )}
+                {isUnpaid && (
+                <Button
+                    onClick={handlePayNow}
+                    className="bg-orange-500 hover:bg-orange-600"
+                >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Bayar Sekarang
+                </Button>
+                )}
+            </div>
           </div>
         </div>
 
