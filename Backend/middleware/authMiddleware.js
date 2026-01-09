@@ -45,8 +45,17 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: "Akun dinonaktifkan." });
       }
 
+      // Parse roles (support comma-separated roles like "admin,seller")
+      const user = rows[0];
+      user.roles = user.role ? user.role.split(',').map(r => r.trim()) : [];
+      
+      // Helper function to check if user has a specific role
+      user.hasRole = function(role) {
+        return this.roles.includes(role);
+      };
+
       // Tambahkan payload ke req.user
-      req.user = rows[0];
+      req.user = user;
 
       // Lanjutkan ke controller berikutnya
       next();
@@ -73,4 +82,15 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+/**
+ * Middleware to require admin role
+ */
+const requireAdmin = (req, res, next) => {
+  if (req.user && (req.user.role === 'admin' || req.user.hasRole?.('admin'))) {
+    next();
+  } else {
+    res.status(403).json({ message: "Access denied. Admin only." });
+  }
+};
+
+module.exports = { protect, requireAdmin };

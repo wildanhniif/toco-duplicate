@@ -142,7 +142,7 @@ exports.createOrder = async (req, res) => {
       const orderCode = generateOrderCode();
       const [ins] = await conn.query(
         `INSERT INTO orders (
-           order_code, user_id, store_id, address_id,
+           order_number, user_id, store_id, address_id,
            subtotal_amount, shipping_amount, discount_amount, total_amount,
            voucher_id, status, payment_status,
            shipping_courier_code, shipping_service_code, shipping_service_name,
@@ -327,7 +327,7 @@ exports.getMyOrders = async (req, res) => {
 
   // 1. Fetch Orders with Store Name
   const [rows] = await db.query(
-    `SELECT o.*, s.name as store_name
+    `SELECT o.*, o.order_number as order_code, s.name as store_name
      FROM orders o
      JOIN stores s ON o.store_id = s.store_id
      WHERE ${where.join(" AND ")}
@@ -379,10 +379,9 @@ exports.getOrderDetail = async (req, res) => {
   const { id } = req.params;
 
   console.log(`[DEBUG] getOrderDetail - ID: ${id}, UserID: ${userId}`);
-  console.log(`[DEBUG] req.user payload:`, req.user);
 
   const [rows] = await db.query(
-    `SELECT o.*, s.name as store_name 
+    `SELECT o.*, o.order_number as order_code, s.name as store_name 
      FROM orders o 
      LEFT JOIN stores s ON o.store_id = s.store_id
      WHERE o.order_id = ? AND o.user_id = ? LIMIT 1`,
@@ -392,13 +391,20 @@ exports.getOrderDetail = async (req, res) => {
   if (!rows.length) {
     console.log(`[DEBUG] Order not found in DB for ID ${id} and UserID ${userId}`);
     // Check if order exists at all (for diagnosis)
-    const [check] = await db.query("SELECT * FROM orders WHERE order_id = ?", [id]);
+    const [check] = await db.query("SELECT user_id FROM orders WHERE order_id = ?", [id]);
     if (check.length) {
-        console.log(`[DEBUG] Order EXISTS but belongs to UserID ${check[0].user_id}`);
+        console.log(`[DEBUG] Order EXISTS but belongs to UserID ${check[0].user_id} (Requesting UserID: ${userId})`);
+        return res.status(403).json({ 
+            message: "Anda tidak memiliki akses ke pesanan ini",
+            debug: { reqId: id, reqUserId: userId, actualUserId: check[0].user_id }
+        });
     } else {
         console.log(`[DEBUG] Order ID ${id} does NOT exist at all`);
+        return res.status(404).json({ 
+            message: `Pesanan #${id} tidak ditemukan`,
+            debug: { reqId: id, reqUserId: userId, typeId: typeof id, typeUserId: typeof userId }
+        });
     }
-    return res.status(404).json({ message: "Order not found" });
   }
 
   const order = rows[0];
@@ -413,15 +419,54 @@ exports.getOrderDetail = async (req, res) => {
     [id]
   );
   
-  const [ship] = await db.query(
-    `SELECT * FROM order_shipping WHERE order_id = ?`,
+  // Fetch address from user_addresses linked by orders.shipping_address_id
+  // Note: ideally we should have snapshot this, but for now we link to the current address record 
+  // (or hopefully the address record is immutable/newly created on change)
+  let shippingData = null;
+  
+  if (order.shipping_address_id) {
+      const [addr] = await db.query(
+        `SELECT * FROM user_addresses WHERE address_id = ?`,
+        [order.shipping_address_id]
+      );
+      if (addr.length) {
+          shippingData = { ...addr[0] }; 
+      }
+  }
+
+  // Fetch shipment info (courier, tracking, etc)
+  const [shipment] = await db.query(
+    `SELECT * FROM order_shipments WHERE order_id = ?`,
     [id]
   );
+  
+  if (shipment.length) {
+      // Merge shipment info into shippingData (frontend expects single object 'shipping')
+      shippingData = { 
+          ...shippingData, 
+          // Map shipment fields to what frontend might expect or just include them
+           shipping_courier_code: shipment[0].courier_code,
+           shipping_service_name: shipment[0].service_name,
+           shipping_etd_min_days: shipment[0].etd_min_days,
+           shipping_etd_max_days: shipment[0].etd_max_days,
+           awb_number: shipment[0].tracking_number // Assuming tracking_number column exists based on typical naming, or check schema output if available. 
+           // Wait, schema output for order_shipments showed 'courier_code', 'service_code', 'service_name', 'etd_min_days', 'etd_max_days', 'shipping_cost', 'tracking_number'.
+      };
+      // Note: tracking_number wasn't explicitly in my debug output but 'awb_number' is used in frontend. 
+      // Let's check if 'awb_number' or 'tracking_number' is in schema.
+      // Schema output was cut off slightly but showed 'shipment_id', 'order_id', 'courier_code', 'service_code', 'service_name', etc.
+      // I will assume standard fields. If frontend uses 'awb_number', I'll map whatever DB has to 'awb_number'.
+      // If DB has 'tracking_number', I map it.
+      if (shipment[0].tracking_number) {
+           shippingData.awb_number = shipment[0].tracking_number;
+      }
+  }
+
   const [logs] = await db.query(
     `SELECT * FROM order_status_logs WHERE order_id = ? ORDER BY created_at ASC`,
     [id]
   );
-  res.json({ order, items, shipping: ship[0] || null, logs });
+  res.json({ order, items, shipping: shippingData, logs });
 };
 
 // Get seller order stats

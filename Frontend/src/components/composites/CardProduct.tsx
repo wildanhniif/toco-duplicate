@@ -14,6 +14,10 @@ type CardProductProps = {
   img: string;
   discountPercentage?: number;
   variant?: "grid" | "list";
+  // Variant support
+  hasVariants?: boolean;
+  minVariantPrice?: number;
+  maxVariantPrice?: number;
 };
 
 export default function CardProduct(props: CardProductProps) {
@@ -27,6 +31,9 @@ export default function CardProduct(props: CardProductProps) {
     img,
     discountPercentage,
     variant = "grid",
+    hasVariants = false,
+    minVariantPrice,
+    maxVariantPrice,
   } = props;
 
   const isList = variant === "list";
@@ -47,6 +54,9 @@ export default function CardProduct(props: CardProductProps) {
       minimumFractionDigits: 0,
     }).format(value);
 
+  // Determine price display
+  const showPriceRange = hasVariants && minVariantPrice && maxVariantPrice && minVariantPrice !== maxVariantPrice;
+
   const cardClassName = `w-full h-auto overflow-hidden border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-transform bg-white p-0 gap-0 ${
     isList ? "max-w-full flex flex-row" : "max-w-[220px]"
   }`;
@@ -59,6 +69,8 @@ export default function CardProduct(props: CardProductProps) {
     isList ? "justify-center" : ""
   }`;
 
+  const isOutOfStock = stock <= 0;
+
   return (
     <Link href={href} className="block">
       <Card className={cardClassName}>
@@ -68,32 +80,72 @@ export default function CardProduct(props: CardProductProps) {
             alt={title}
             fill
             sizes="(max-width: 768px) 50vw, 220px"
-            className="object-cover object-center rounded-2xl"
+            className={`object-cover object-center rounded-2xl ${
+              isOutOfStock ? "grayscale opacity-50" : ""
+            }`}
           />
+          {isOutOfStock && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+              <span className="bg-black/60 text-white text-[10px] px-2 py-1 rounded-md font-medium">
+                Habis
+              </span>
+            </div>
+          )}
           <CardDescription className="sr-only">
             This is a product card for {title}
           </CardDescription>
         </div>
         <CardContent className={contentClassName}>
-          <span className="text-[11px] text-orange-500 font-semibold">
-            Sisa {stock}
-          </span>
+          {isOutOfStock ? (
+            <span className="text-[11px] text-red-500 font-semibold">
+              Stok Habis
+            </span>
+          ) : (
+            <span className="text-[11px] text-orange-500 font-semibold">
+              Sisa {stock}
+            </span>
+          )}
           <CardTitle className="text-xs font-medium text-gray-900 line-clamp-2">
             {title}
           </CardTitle>
-          <span className="text-sm font-bold text-red-600">
-            {formatCurrency(price)}
-          </span>
-          {hasDiscount && originalPrice && (
-            <div className="flex items-center gap-1 text-[11px]">
-              <span className="line-through text-gray-400">
-                {formatCurrency(originalPrice)}
+          
+          {/* Price Display */}
+          {showPriceRange ? (
+            <>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-bold text-red-600">
+                  {formatCurrency(minVariantPrice!)}
+                </span>
+                <span className="text-[10px] text-gray-500">-</span>
+                <span className="text-sm font-bold text-red-600">
+                  {formatCurrency(maxVariantPrice!)}
+                </span>
+              </div>
+              {hasVariants && (
+                <span className="text-[10px] text-gray-500">
+                  {/* Optional: show variant count */}
+                  Pilih variasi
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-bold text-red-600">
+                {formatCurrency(price)}
               </span>
-              <span className="text-red-500 font-semibold">
-                {Math.round(discountPercentage!)}%
-              </span>
-            </div>
+              {hasDiscount && originalPrice && (
+                <div className="flex items-center gap-1 text-[11px]">
+                  <span className="line-through text-gray-400">
+                    {formatCurrency(originalPrice)}
+                  </span>
+                  <span className="text-red-500 font-semibold">
+                    {Math.round(discountPercentage!)}% OFF
+                  </span>
+                </div>
+              )}
+            </>
           )}
+          
           <span className="text-[11px] text-gray-500 mt-1 line-clamp-1">
             {city}
           </span>

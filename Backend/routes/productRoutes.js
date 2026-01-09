@@ -24,6 +24,11 @@ const {
   addProductImages,
 } = require("../controllers/productController");
 
+const {
+  bulkImport,
+  downloadTemplate,
+} = require("../controllers/bulkProductController");
+
 // Impor middleware proteksi
 const { protect } = require("../middleware/authMiddleware");
 
@@ -43,6 +48,12 @@ const uploadProductImages = multer({
 });
 
 // Gunakan rute varian sebagai "sub-route"
+const { getProductVariants } = require("../controllers/productVariantController");
+router.get("/:product_id/variants", getProductVariants);
+
+// Bulk import routes (before /my to avoid conflict)
+router.get("/bulk-template", protect, downloadTemplate);
+router.post("/bulk-import", protect, bulkImport);
 
 // Daftar produk seller (dashboard)
 router.get("/my", protect, getMyProducts);

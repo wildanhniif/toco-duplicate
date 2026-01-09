@@ -121,11 +121,15 @@ const createProduct = async (req, res) => {
     // Validasi wajib per tipe
     if (effectiveClassification === "marketplace") {
       if (price == null) throw new Error("PRICE_REQUIRED");
+      if (price < 0) throw new Error("PRICE_CANNOT_BE_NEGATIVE");
       if (stock_quantity == null) throw new Error("STOCK_REQUIRED");
+      if (stock_quantity < 0) throw new Error("STOCK_CANNOT_BE_NEGATIVE");
       if (weight_gram == null) throw new Error("WEIGHT_REQUIRED");
+      if (weight_gram < 0) throw new Error("WEIGHT_CANNOT_BE_NEGATIVE");
     }
     if (catMeta.type === "motor") {
       const m = motor_specs || {};
+      if (price != null && price < 0) throw new Error("PRICE_CANNOT_BE_NEGATIVE");
       const required = ["brand", "year", "model", "transmission"];
       for (const key of required) {
         if (!m[key]) throw new Error(`MOTOR_${key.toUpperCase()}_REQUIRED`);
@@ -221,15 +225,27 @@ const createProduct = async (req, res) => {
 
     if (Array.isArray(skus) && skus.length > 0) {
       for (const s of skus) {
+        // Validate SKU prices and stock cannot be negative
+        const skuPrice = s.price ?? price ?? 0;
+        const skuStock = s.stock_quantity ?? 0;
+        
+        if (skuPrice < 0) {
+          throw new Error("VARIANT_PRICE_CANNOT_BE_NEGATIVE");
+        }
+        if (skuStock < 0) {
+          throw new Error("VARIANT_STOCK_CANNOT_BE_NEGATIVE");
+        }
+        
         const [skuRes] = await conn.query(
-          `INSERT INTO product_skus (product_id, sku_code, price, stock_quantity, weight_gram, dimensions) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO product_skus (product_id, sku_code, price, stock_quantity, weight_gram, dimensions, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
             product_id,
             s.sku_code,
-            s.price ?? price ?? 0,
-            s.stock_quantity ?? 0,
+            skuPrice,
+            skuStock,
             s.weight_gram ?? weight_gram ?? null,
             s.dimensions ? JSON.stringify(s.dimensions) : null,
+            s.image_url || null
           ]
         );
         const product_sku_id = skuRes.insertId;
@@ -399,6 +415,8 @@ const getAllProducts = async (req, res) => {
     if (sort === "price_asc") orderBy = "p.price ASC";
     else if (sort === "price_desc") orderBy = "p.price DESC";
     else if (sort === "created_at_asc") orderBy = "p.created_at ASC";
+    else if (sort === "views_desc") orderBy = "p.view_count DESC";
+    else if (sort === "random") orderBy = "RAND()";
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -411,7 +429,10 @@ const getAllProducts = async (req, res) => {
               s.city AS store_city,
               s.rating_average AS store_rating,
               s.review_count AS store_review_count,
-              (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image
+              (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS primary_image,
+              (SELECT MIN(ps.price) FROM product_skus ps WHERE ps.product_id = p.product_id) AS min_variant_price,
+              (SELECT MAX(ps.price) FROM product_skus ps WHERE ps.product_id = p.product_id) AS max_variant_price,
+              (SELECT COUNT(*) FROM product_skus ps WHERE ps.product_id = p.product_id) AS variant_count
             FROM products p
             JOIN stores s ON s.store_id = p.store_id
             ${whereSql}
@@ -486,38 +507,110 @@ const updateProduct = async (req, res) => {
   const { id } = req.params;
   const store_id = req.user.store_id;
 
-  // Ambil field yang ingin diupdate dari body
-  const { name, description, price, stock_quantity, status } = req.body;
+  const {
+    name,
+    description,
+    price,
+    stock_quantity,
+    status,
+    category_id,
+    images, // Array of image URLs
+    sku,
+    condition,
+    brand,
+    weight_gram,
+    dimensions,
+    discount_percentage,
+    is_preorder,
+    motor_specs,
+    mobil_specs,
+    property_specs,
+  } = req.body;
 
+  const conn = await db.getConnection();
   try {
-    // PERHATIKAN: Query ini sangat aman.
-    // User HANYA bisa update produk jika product_id cocok DAN store_id juga cocok.
-    // Ini mencegah user A mengedit produk milik user B.
-    const sql = `
-            UPDATE products 
-            SET name = ?, description = ?, price = ?, stock_quantity = ?, status = ? 
-            WHERE product_id = ? AND store_id = ?
-        `;
-    const [result] = await db.query(sql, [
-      name,
-      description,
-      price,
-      stock_quantity,
-      status,
-      id,
-      store_id,
-    ]);
+    await conn.beginTransaction();
 
-    if (result.affectedRows === 0) {
+    // Verify product ownership
+    const [products] = await conn.query(
+      "SELECT product_id FROM products WHERE product_id = ? AND store_id = ?",
+      [id, store_id]
+    );
+
+    if (products.length === 0) {
+      await conn.rollback();
       return res
         .status(404)
         .json({ message: "Product not found or user not authorized." });
     }
 
+    // Build UPDATE query dynamically based on what's provided
+    const updates = [];
+    const values = [];
+
+    if (name !== undefined) { updates.push("name = ?"); values.push(name); }
+    if (description !== undefined) { updates.push("description = ?"); values.push(description); }
+    if (price !== undefined) { updates.push("price = ?"); values.push(parseFloat(price)); }
+    if (stock_quantity !== undefined) { updates.push("stock_quantity = ?"); values.push(parseInt(stock_quantity)); }
+    if (status !== undefined) { updates.push("status = ?"); values.push(status); }
+    if (category_id !== undefined) { updates.push("category_id = ?"); values.push(parseInt(category_id)); }
+    if (sku !== undefined) { updates.push("sku = ?"); values.push(sku); }
+    if (condition !== undefined) { updates.push("`condition` = ?"); values.push(condition); }
+    if (brand !== undefined) { updates.push("brand = ?"); values.push(brand); }
+    if (weight_gram !== undefined) { updates.push("weight_gram = ?"); values.push(parseInt(weight_gram) || 0); }
+    if (discount_percentage !== undefined) { updates.push("discount_percentage = ?"); values.push(Math.abs(parseFloat(discount_percentage) || 0)); }
+    if (is_preorder !== undefined) { updates.push("is_preorder = ?"); values.push(is_preorder ? 1 : 0); }
+    
+    if (dimensions) {
+      if (dimensions.length !== undefined) { updates.push("length_mm = ?"); values.push(parseInt(dimensions.length) || 0); }
+      if (dimensions.width !== undefined) { updates.push("width_mm = ?"); values.push(parseInt(dimensions.width) || 0); }
+      if (dimensions.height !== undefined) { updates.push("height_mm = ?"); values.push(parseInt(dimensions.height) || 0); }
+    }
+
+    // Handle specs for different product types
+    if (motor_specs) {
+      updates.push("motor_specs = ?");
+      values.push(JSON.stringify(motor_specs));
+    }
+    if (mobil_specs) {
+      updates.push("mobil_specs = ?");
+      values.push(JSON.stringify(mobil_specs));
+    }
+    if (property_specs) {
+      updates.push("property_specs = ?");
+      values.push(JSON.stringify(property_specs));
+    }
+
+    // Update product data
+    if (updates.length > 0) {
+      const sql = `UPDATE products SET ${updates.join(", ")} WHERE product_id = ? AND store_id = ?`;
+      await conn.query(sql, [...values, id, store_id]);
+    }
+
+    // Handle image updates
+    if (images && Array.isArray(images)) {
+      // Delete old images
+      await conn.query("DELETE FROM product_images WHERE product_id = ?", [id]);
+
+      // Insert new images
+      if (images.length > 0) {
+        const imageValues = images.map((url, index) => [id, url, null, index]);
+        await conn.query(
+          "INSERT INTO product_images (product_id, url, alt_text, sort_order) VALUES ?",
+          [imageValues]
+        );
+      }
+    }
+
+    await conn.commit();
+
     res.status(200).json({ message: "Product updated successfully" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    await conn.rollback();
+    console.error("Update product error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  } finally {
+    conn.release();
   }
 };
 

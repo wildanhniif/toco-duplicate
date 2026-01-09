@@ -23,15 +23,13 @@ const login = async (req, res) => {
     const user = users[0];
     let store_id = null; // Default storeId adalah null
 
-    // Cek jika user adalah seller, dan HANYA JIKA seller, cari storeId-nya.
-    if (user.role === "seller") {
-      const [stores] = await pool.query(
-        "SELECT store_id FROM stores WHERE user_id = ?",
-        [user.user_id]
-      );
-      if (stores.length > 0) {
-        store_id = stores[0].store_id;
-      }
+    // Cek apakah user memiliki toko (untuk semua role: seller, admin, dll)
+    const [stores] = await pool.query(
+      "SELECT store_id FROM stores WHERE user_id = ?",
+      [user.user_id]
+    );
+    if (stores.length > 0) {
+      store_id = stores[0].store_id;
     }
 
     // Cek jika akun sudah diverifikasi

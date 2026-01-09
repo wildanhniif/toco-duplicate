@@ -5,21 +5,27 @@ const getProductVariants = async (req, res) => {
   try {
     const { product_id } = req.params;
 
+    // Fetch from product_skus which is the source of truth for variants/inventory
+    // Joined with attributes and options to get the name/value info
     const [variants] = await pool.query(
       `SELECT 
-        variant_id,
-        product_id,
-        variant_name,
-        variant_value,
-        price_adjustment,
-        image_url,
-        stock_quantity,
-        sku,
-        is_active,
-        created_at
-      FROM product_variants
-      WHERE product_id = ? AND is_active = 1
-      ORDER BY variant_name, variant_value`,
+        s.product_sku_id as variant_id,
+        s.product_id,
+        a.attribute_name as variant_name,
+        o.option_value as variant_value,
+        NULL as price_adjustment, -- Legacy field, not used
+        s.price,
+        s.image_url,
+        s.stock_quantity,
+        s.sku_code as sku,
+        1 as is_active, -- valid SKUs are active
+        s.created_at
+      FROM product_skus s
+      JOIN product_sku_options pso ON s.product_sku_id = pso.product_sku_id
+      JOIN product_variant_attribute_options o ON pso.option_id = o.option_id
+      JOIN product_variant_attributes a ON o.attribute_id = a.attribute_id
+      WHERE s.product_id = ?
+      ORDER BY s.product_sku_id ASC`,
       [product_id]
     );
 

@@ -4,12 +4,15 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 
 interface MarketplaceFieldsProps {
   formData: any;
   setFormData: (data: any) => void;
 }
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function MarketplaceFields({
   formData,
@@ -19,6 +22,7 @@ export default function MarketplaceFields({
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [variantType, setVariantType] = useState("");
   const [variantValues, setVariantValues] = useState("");
+  const [uploadingVariantIndex, setUploadingVariantIndex] = useState<number | null>(null);
 
   const handleAddVariant = () => {
     if (!variantType || !variantValues) return;
@@ -37,6 +41,7 @@ export default function MarketplaceFields({
       stock: 0,
       price: defaultPrice,
       sku: "",
+      image_url: "", // Inisialisasi gambar kosong
     }));
 
     setFormData((prev: any) => ({
@@ -55,21 +60,83 @@ export default function MarketplaceFields({
     }));
   };
 
+  const handleVariantImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingVariantIndex(index);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("image", file); // Backend expects 'image' or 'images'
+
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/upload/image?type=products`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formDataUpload,
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update variant at index with new image URL
+        const newVariants = [...formData.variants];
+        newVariants[index].image_url = data.url;
+        setFormData((prev: any) => ({
+          ...prev,
+          variants: newVariants,
+        }));
+        toast.success("Gambar varian berhasil diupload");
+      } else {
+        console.error("Failed to upload image");
+        toast.error("Gagal upload gambar varian");
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Terjadi kesalahan saat upload gambar");
+    } finally {
+      setUploadingVariantIndex(null);
+      e.target.value = ""; // Reset input
+    }
+  };
+
+  const removeVariantImage = (index: number) => {
+    const newVariants = [...formData.variants];
+    newVariants[index].image_url = "";
+    setFormData((prev: any) => ({
+      ...prev,
+      variants: newVariants,
+    }));
+  };
+
   const handleNumberInput = (
     e: React.ChangeEvent<HTMLInputElement>,
     field: string,
     isFloat = false
   ) => {
     const val = e.target.value;
+    
     // Allow empty string to let user delete content
     if (val === "") {
       setFormData((prev: any) => ({ ...prev, [field]: "" }));
       return;
     }
     
+    // Parse and validate the number
     const num = isFloat ? parseFloat(val) : parseInt(val);
-    if (!isNaN(num) && num < 0) return; // Prevent negative inputs
     
+    // Prevent negative values - don't update state at all
+    if (isNaN(num) || num < 0) {
+      e.preventDefault();
+      return;
+    }
+    
+    // Only update if valid positive number or zero
     setFormData((prev: any) => ({ ...prev, [field]: val }));
   };
 
@@ -175,10 +242,11 @@ export default function MarketplaceFields({
         {formData.variants.length > 0 && (
           <div className="space-y-2">
             <div className="grid grid-cols-12 gap-2 mb-2 px-3 text-sm font-medium text-gray-500">
-              <div className="col-span-4">Varian</div>
+              <div className="col-span-3">Varian</div>
+              <div className="col-span-2 text-center">Gambar</div>
               <div className="col-span-3">Harga</div>
               <div className="col-span-3">Stok</div>
-              <div className="col-span-2"></div>
+              <div className="col-span-1"></div>
             </div>
 
             {formData.variants.map((variant: any, index: number) => (
@@ -186,9 +254,45 @@ export default function MarketplaceFields({
                 key={index}
                 className="grid grid-cols-12 gap-2 items-center p-3 border rounded-lg bg-white"
               >
-                <div className="col-span-4 flex-1">
-                  <span className="font-medium text-gray-900">{variant.variant_name}:</span>{" "}
-                  <span className="text-gray-600">{variant.variant_value}</span>
+                <div className="col-span-3 flex-1 overflow-hidden">
+                  <span className="font-medium text-gray-900 block truncate">{variant.variant_name}:</span>
+                  <span className="text-gray-600 block truncate">{variant.variant_value}</span>
+                </div>
+
+                <div className="col-span-2 flex justify-center">
+                  <div className="relative h-10 w-10">
+                    {variant.image_url ? (
+                        <div className="group relative h-full w-full">
+                           <img 
+                              src={variant.image_url} 
+                              alt="Variant" 
+                              className="h-10 w-10 object-cover rounded-md border"
+                           />
+                           <button
+                             type="button"
+                             onClick={() => removeVariantImage(index)}
+                             className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                           >
+                              <X className="w-3 h-3" />
+                           </button>
+                        </div>
+                    ) : (
+                        <label className="cursor-pointer flex items-center justify-center h-10 w-10 bg-gray-100 rounded-md border border-dashed border-gray-300 hover:bg-gray-200">
+                             {uploadingVariantIndex === index ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                             ) : (
+                                <ImageIcon className="w-4 h-4 text-gray-400" />
+                             )}
+                             <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={(e) => handleVariantImageUpload(e, index)}
+                                disabled={uploadingVariantIndex !== null}
+                             />
+                        </label>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="col-span-3">
@@ -196,17 +300,26 @@ export default function MarketplaceFields({
                     type="number"
                     placeholder="Harga"
                     min="0"
+                    step="1000"
                     value={variant.price}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      if (!isNaN(val) && val < 0) return;
+                      const val = e.target.value;
+                      if (val === "") {
+                         // Logic deletion handled elsewhere or allowed empty
+                         const newVariants = [...formData.variants];
+                         newVariants[index].price = "";
+                         setFormData((prev: any) => ({...prev, variants: newVariants}));
+                         return;
+                      }
+                      const numVal = parseInt(val);
+                      if (isNaN(numVal) || numVal < 0) { e.preventDefault(); return; }
                       
                       const newVariants = [...formData.variants];
-                      newVariants[index].price = isNaN(val) ? "" : val;
-                      setFormData((prev: any) => ({
-                        ...prev,
-                        variants: newVariants,
-                      }));
+                      newVariants[index].price = numVal;
+                      setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e') e.preventDefault();
                     }}
                     className="h-9"
                   />
@@ -219,21 +332,28 @@ export default function MarketplaceFields({
                     min="0"
                     value={variant.stock}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      if (!isNaN(val) && val < 0) return;
+                      const val = e.target.value;
+                      if (val === "") {
+                         const newVariants = [...formData.variants];
+                         newVariants[index].stock = "";
+                         setFormData((prev: any) => ({...prev, variants: newVariants}));
+                         return;
+                      }
+                      const numVal = parseInt(val);
+                      if (isNaN(numVal) || numVal < 0) { e.preventDefault(); return; }
 
                       const newVariants = [...formData.variants];
-                      newVariants[index].stock = isNaN(val) ? 0 : val;
-                      setFormData((prev: any) => ({
-                        ...prev,
-                        variants: newVariants,
-                      }));
+                      newVariants[index].stock = numVal;
+                      setFormData((prev: any) => ({ ...prev, variants: newVariants }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e') e.preventDefault();
                     }}
                     className="h-9"
                   />
                 </div>
 
-                <div className="col-span-2 flex justify-end">
+                <div className="col-span-1 flex justify-end">
                   <Button
                     type="button"
                     variant="ghost"
@@ -250,7 +370,7 @@ export default function MarketplaceFields({
         )}
       </div>
 
-      {/* Harga */}
+      {/* Harga & Diskon */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="price" className="block mb-2">
@@ -266,6 +386,9 @@ export default function MarketplaceFields({
               min="0"
               value={formData.price}
               onChange={(e) => handleNumberInput(e, "price")}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === 'e') e.preventDefault();
+              }}
               placeholder="0"
               className="pl-10"
               required
@@ -284,6 +407,9 @@ export default function MarketplaceFields({
             max="100"
             value={formData.discount_percentage}
             onChange={(e) => handleNumberInput(e, "discount_percentage")}
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e') e.preventDefault();
+            }}
             placeholder="0"
           />
         </div>
@@ -301,6 +427,9 @@ export default function MarketplaceFields({
             min="0"
             value={formData.stock_quantity}
             onChange={(e) => handleNumberInput(e, "stock_quantity")}
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e') e.preventDefault();
+            }}
             placeholder="0"
             required
             disabled={formData.variants.length > 0}

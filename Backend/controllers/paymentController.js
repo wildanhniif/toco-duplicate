@@ -24,7 +24,7 @@ exports.initPayment = async (req, res) => {
 
     // Load order & customer (gunakan order_number di schema sekarang)
     const [orders] = await db.query(
-      `SELECT o.order_id, o.order_number, o.user_id, o.total_amount
+      `SELECT o.order_id, o.order_number, o.user_id, o.total_amount, o.snap_token
        FROM orders o
        WHERE o.order_id = ? AND o.user_id = ? LIMIT 1`,
       [order_id, userId]
@@ -35,6 +35,17 @@ exports.initPayment = async (req, res) => {
     const order = orders[0];
     const orderNumber = order.order_number;
     const grossAmount = Math.round(Number(order.total_amount) || 0);
+
+    // ✅ REUSE EXISTING TOKEN IF AVAILABLE
+    if (order.snap_token) {
+      console.log("Reusing existing snap_token for order", orderNumber);
+      return res.json({
+        message: "Using existing transaction",
+        snap_token: order.snap_token,
+        redirect_url: `https://app.sandbox.midtrans.com/snap/v2/vtweb/${order.snap_token}`,
+        order_code: orderNumber,
+      });
+    }
 
     const [users] = await db.query(
       "SELECT full_name, email, phone_number FROM users WHERE user_id = ? LIMIT 1",
@@ -67,6 +78,7 @@ exports.initPayment = async (req, res) => {
       },
     };
 
+    console.log("Creating new Midtrans transaction for", orderNumber);
     const { data } = await axios.post(snapUrl, payload, {
       headers: {
         "Content-Type": "application/json",
@@ -75,6 +87,15 @@ exports.initPayment = async (req, res) => {
       },
       timeout: 15000,
     });
+
+    const snapToken = data?.token;
+    const redirectUrl = data?.redirect_url;
+
+    // ✅ SAVE TOKEN TO ORDERS TABLE
+    await db.query(
+      "UPDATE orders SET snap_token = ? WHERE order_id = ?",
+      [snapToken, order.order_id]
+    );
 
     // Simpan/Update record di tabel payments
     const [existingPayments] = await db.query(
@@ -96,7 +117,7 @@ exports.initPayment = async (req, res) => {
           grossAmount,
           "IDR",
           orderNumber,
-          data?.redirect_url || null,
+          redirectUrl,
           rawResponse,
           existingPayments[0].payment_id,
         ]
@@ -114,7 +135,7 @@ exports.initPayment = async (req, res) => {
           "pending",
           grossAmount,
           "IDR",
-          data?.redirect_url || null,
+          redirectUrl,
           rawResponse,
         ]
       );
@@ -122,13 +143,16 @@ exports.initPayment = async (req, res) => {
 
     return res.json({
       message: "Snap transaction created",
-      snap_token: data?.token,
-      redirect_url: data?.redirect_url,
+      snap_token: snapToken,
+      redirect_url: redirectUrl,
       order_code: orderNumber,
     });
   } catch (e) {
-    console.error(e?.response?.data || e);
-    return res.status(500).json({ message: "Failed to init payment" });
+    console.error("initPayment error:", e?.response?.data || e);
+    return res.status(500).json({ 
+      message: "Failed to init payment",
+      error: e?.response?.data?.error_messages?.[0] || e.message 
+    });
   }
 };
 
@@ -332,6 +356,9 @@ exports.syncPaymentStatus = async (req, res) => {
   const userId = req.user.user_id || req.user.id;
   const { order_id } = req.params;
 
+  console.log("=== SYNC PAYMENT STATUS START ===");
+  console.log("Order ID:", order_id, "User ID:", userId);
+
   try {
     // 1. Get Order
     const [orders] = await db.query(
@@ -339,14 +366,17 @@ exports.syncPaymentStatus = async (req, res) => {
       [order_id, userId]
     );
     if (!orders.length) {
+      console.log("ERROR: Order not found in database");
       return res.status(404).json({ message: "Order not found" });
     }
     const order = orders[0];
-    const orderNumber = order.order_number || order.order_code; // Handle consistent naming (order_code vs order_number)
+    const orderNumber = order.order_number || order.order_code;
+    console.log("Found order:", orderNumber, "Current status:", order.status, "Payment status:", order.payment_status);
 
     // 2. Call Midtrans Status API
     const { base64ServerKey, statusBaseUrl } = getMidtransConfig();
     const url = `${statusBaseUrl}/${encodeURIComponent(orderNumber)}/status`;
+    console.log("Checking Midtrans status at:", url);
     
     let midtransData;
     try {
@@ -358,7 +388,9 @@ exports.syncPaymentStatus = async (req, res) => {
         timeout: 15000,
         });
         midtransData = data;
+        console.log("Midtrans response:", JSON.stringify(midtransData, null, 2));
     } catch (apiError) {
+        console.log("Midtrans API Error:", apiError.response?.status, apiError.response?.data || apiError.message);
         if (apiError.response && apiError.response.status === 404) {
              return res.status(404).json({ message: "Transaction not found in Midtrans" });
         }
@@ -428,18 +460,25 @@ exports.syncPaymentStatus = async (req, res) => {
 
     // Log if changed
     if (order.status !== statusMap.order_status) {
-        await db.query(
-        `INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, note)
-            VALUES (?, ?, ?, 'user_sync', ?)`,
-        [
-            order.order_id,
-            order.status,
-            statusMap.order_status,
-            `Manual Sync: ${transaction_status}`,
-        ]
-        );
+        console.log("Status changed from", order.status, "to", statusMap.order_status);
+        try {
+            await db.query(
+            `INSERT INTO order_status_logs (order_id, old_status, new_status, changed_by, notes)
+                VALUES (?, ?, ?, 'user_sync', ?)`,
+            [
+                order.order_id,
+                order.status,
+                statusMap.order_status,
+                `Manual Sync: ${transaction_status}`,
+            ]
+            );
+        } catch (logError) {
+            console.error("Failed to insert status log:", logError);
+            // Don't fail the whole sync if logging fails
+        }
     }
 
+    console.log("=== SYNC COMPLETED SUCCESSFULLY ===");
     return res.json({ 
         message: "Status synced", 
         status: statusMap.order_status, 
@@ -447,7 +486,9 @@ exports.syncPaymentStatus = async (req, res) => {
     });
 
   } catch (e) {
-    console.error("Sync Error:", e?.response?.data || e);
-    return res.status(500).json({ message: "Failed to sync status" });
+    console.error("=== SYNC ERROR ===");
+    console.error("Error details:", e?.response?.data || e);
+    console.error("Stack trace:", e.stack);
+    return res.status(500).json({ message: "Failed to sync status", error: e.message });
   }
 };

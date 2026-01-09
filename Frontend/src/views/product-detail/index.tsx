@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import ProductVariantSelector from "@/components/composites/Product/ProductVariantSelector";
 import { toast } from "sonner";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -82,6 +82,9 @@ interface RecomendationProductItem {
   img: string;
   slug?: string;
   discountPercentage?: number;
+  hasVariants?: boolean;
+  minVariantPrice?: number;
+  maxVariantPrice?: number;
 }
 
 function mapToRecomendationProducts(
@@ -99,6 +102,9 @@ function mapToRecomendationProducts(
       img: product.primary_image || "/iphone-product.webp",
       slug: product.slug,
       discountPercentage: product.discount_percentage,
+      hasVariants: (product as any).variant_count > 0,
+      minVariantPrice: (product as any).min_variant_price,
+      maxVariantPrice: (product as any).max_variant_price,
     }));
 }
 
@@ -395,24 +401,70 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
               </div>
             </Card>
             
-            {/* Simple Lightbox Modal */}
+            {/* Enhanced Lightbox Modal with Navigation */}
             <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
               <DialogContent className="max-w-4xl w-full p-0 bg-transparent border-none shadow-none overflow-hidden flex items-center justify-center">
+                 <DialogTitle className="sr-only">Product Image Lightbox</DialogTitle>
                  <div className="relative w-full h-[80vh] flex items-center justify-center">
                     <button 
                       onClick={() => setIsLightboxOpen(false)}
-                      className="absolute top-2 right-2 z-50 p-2 bg-black/50 rounded-full text-white hover:bg-black/70"
+                      className="absolute top-2 right-2 z-50 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                      aria-label="Close"
                     >
                       <X className="w-6 h-6" />
                     </button>
+                    
+                    {/* Previous button - only show if there are multiple images */}
+                    {product.images && product.images.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const currentIndex = product.images!.findIndex(img => img.url === mainImageSrc);
+                          const prevIndex = currentIndex === 0 ? product.images!.length - 1 : currentIndex - 1;
+                          setActiveImage(product.images![prevIndex].url);
+                        }}
+                        className="absolute left-4 z-50 p-3 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                        aria-label="Previous Image"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    )}
+                    
                     <div className="relative w-full h-full">
                        <Image
-                          src={mainImageSrc}
+                          src={mainImageSrc || product.images?.[0]?.url || "/placeholder.png"}
                           alt={product.name}
                           fill
                           className="object-contain"
+                          priority
+                          unoptimized={!(mainImageSrc || "").includes("cloudinary") && !(mainImageSrc || "").includes("localhost")}
                        />
                     </div>
+                    
+                    {/* Next button - only show if there are multiple images */}
+                    {product.images && product.images.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const currentIndex = product.images!.findIndex(img => img.url === mainImageSrc);
+                          const nextIndex = (currentIndex + 1) % product.images!.length;
+                          setActiveImage(product.images![nextIndex].url);
+                        }}
+                        className="absolute right-4 z-50 p-3 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                        aria-label="Next Image"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    )}
+                    
+                    {/* Image counter */}
+                    {product.images && product.images.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-black/50 rounded-full text-white text-sm">
+                        {product.images.findIndex(img => img.url === mainImageSrc) + 1} / {product.images.length}
+                      </div>
+                    )}
                  </div>
               </DialogContent>
             </Dialog>
@@ -585,18 +637,26 @@ export default function ProductDetailView({ slug }: ProductDetailProps) {
             <div className="flex flex-col sm:flex-row gap-3 mt-4">
               <Button
                 size="lg"
-                className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
+                className={`flex-1 font-semibold ${
+                  product.stock_quantity <= 0
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
+                    : "bg-yellow-400 hover:bg-yellow-500 text-black"
+                }`}
                 onClick={handleBuyNow}
-                disabled={addingToCart}
+                disabled={addingToCart || product.stock_quantity <= 0}
               >
-                Beli Sekarang
+                {product.stock_quantity <= 0 ? "Stok Habis" : "Beli Sekarang"}
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="flex-1 border-yellow-400 text-yellow-500 font-semibold hover:bg-yellow-50"
+                className={`flex-1 font-semibold ${
+                   product.stock_quantity <= 0
+                    ? "border-gray-200 text-gray-400 cursor-not-allowed hover:bg-transparent"
+                    : "border-yellow-400 text-yellow-500 hover:bg-yellow-50"
+                }`}
                 onClick={addToCart}
-                disabled={addingToCart}
+                disabled={addingToCart || product.stock_quantity <= 0}
               >
                 Tambah Ke Keranjang
               </Button>

@@ -743,13 +743,8 @@ exports.setShipping = async (req, res) => {
         String(x.service).toUpperCase() === String(service_code).toUpperCase()
     );
 
-    // Coba match lebih lenient jika tidak ketemu
-    if (!picked) {
-      picked = list.find(
-        (x) =>
-          String(x.code).toLowerCase() === String(courier_code).toLowerCase()
-      );
-    }
+    // Lenient match removed to prevent incorrect service selection.
+    // If exact match (code + service) is not found, we fall through to use req.body.cost directly.
 
     // Jika masih tidak ketemu, gunakan data dari request (dari shippingController mock)
     if (!picked) {

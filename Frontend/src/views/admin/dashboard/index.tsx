@@ -71,7 +71,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <AdminLayout>
+    <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
         <p className="text-slate-500">Selamat datang di panel admin.</p>
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </div>
   );
 }
 

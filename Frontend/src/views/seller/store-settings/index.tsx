@@ -97,7 +97,7 @@ export default function SellerStoreSettingsView() {
   // Fetch store data on mount
   useEffect(() => {
     const fetchStoreData = async () => {
-      if (!isAuthenticated || user?.role !== "seller") return;
+      if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) return;
 
       const authToken = localStorage.getItem("auth_token");
       if (!authToken) return;
@@ -293,7 +293,7 @@ export default function SellerStoreSettingsView() {
   }
 
   // Redirect is happening in useEffect if not authenticated
-  if (!isAuthenticated || user?.role !== "seller") {
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
     return null;
   }
 

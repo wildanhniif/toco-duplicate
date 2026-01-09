@@ -187,7 +187,7 @@ export default function NavbarMenuItems() {
               </NavigationMenuContent>
             </NavigationMenuItem>
             <NavigationMenuItem className={`${navigationMenuTriggerStyle()}`}>
-              <Link href="/" className="flex items-center gap-2 underline">
+              <Link href="/classified" className="flex items-center gap-2 underline">
                 Tokoo Classified
                 <p className="text-[0.6rem] font-bold py-1 px-2 bg-primary text-white rounded-full underline-none">
                   Iklan Baris
@@ -196,14 +196,14 @@ export default function NavbarMenuItems() {
             </NavigationMenuItem>
             <NavigationMenuItem className={`${navigationMenuTriggerStyle()}`}>
               <NavigationMenuLink asChild>
-                <Link href="/" className="underline">
+                <Link href="/seller/dashboard" className="underline">
                   Tokoo Seller
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem className={`${navigationMenuTriggerStyle()}`}>
               <NavigationMenuLink asChild>
-                <Link href="/" className="underline">
+                <Link href="/articles" className="underline">
                   Artikel
                 </Link>
               </NavigationMenuLink>

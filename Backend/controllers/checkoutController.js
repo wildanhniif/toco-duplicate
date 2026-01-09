@@ -22,8 +22,10 @@ async function loadCartSelected(userId) {
        ci.*,
        p.name AS product_name,
        p.store_id,
-       p.weight_gram,
-       p.price AS original_price,
+       p.weight_gram AS base_weight_gram,
+       p.price AS base_price,
+       COALESCE(ps.price, p.price) AS original_price,
+       COALESCE(ps.weight_gram, p.weight_gram) AS weight_gram,
        s.name AS store_name,
        (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS product_image,
        CASE 
@@ -38,6 +40,7 @@ async function loadCartSelected(userId) {
        END AS variation_text
      FROM cart_items ci
      JOIN products p ON p.product_id = ci.product_id
+     LEFT JOIN product_skus ps ON ci.sku_id = ps.sku_id
      JOIN stores s ON s.store_id = p.store_id
      WHERE ci.cart_id = ? AND ci.is_selected = 1
      ORDER BY ci.created_at DESC`,
@@ -299,9 +302,27 @@ exports.getCheckout = async (req, res) => {
 
     // Ambil item selected
     const [items] = await db.query(
-      `SELECT ci.*, p.store_id, s.name AS store_name
+      `SELECT ci.*, 
+         p.store_id, 
+         p.price AS base_price,
+         p.weight_gram AS base_weight_gram,
+         COALESCE(ps.price, p.price) AS unit_price,
+         COALESCE(ps.weight_gram, p.weight_gram) AS weight_gram,
+         s.name AS store_name,
+         (SELECT url FROM product_images WHERE product_id = p.product_id ORDER BY sort_order ASC LIMIT 1) AS product_image,
+         CASE 
+           WHEN ci.sku_id IS NOT NULL THEN (
+             SELECT GROUP_CONCAT(pvao.option_value ORDER BY pva.sort_order SEPARATOR ', ')
+             FROM product_sku_options pso
+             JOIN product_variant_attribute_options pvao ON pso.option_id = pvao.option_id
+             JOIN product_variant_attributes pva ON pvao.attribute_id = pva.attribute_id
+             WHERE pso.sku_id = ci.sku_id
+           )
+           ELSE NULL
+         END AS variation_text
        FROM cart_items ci
        JOIN products p ON p.product_id = ci.product_id
+       LEFT JOIN product_skus ps ON ci.sku_id = ps.sku_id
        JOIN stores s ON s.store_id = p.store_id
        WHERE ci.cart_id = ? AND ci.is_selected = 1
        ORDER BY ci.created_at DESC`,
@@ -601,6 +622,7 @@ exports.createOrder = async (req, res) => {
       createdOrders.push({
         order_id: orderId,
         order_number: orderNumber,
+        order_code: orderNumber, // Alias for frontend compatibility
         store_id,
         total_amount: totalAmount,
       });

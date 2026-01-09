@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Store, UserRound, Bell, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import UserProfileDropdown from "./UserProfileDropdown";
+import NotificationBell from "@/components/NotificationBell";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -19,6 +20,15 @@ if (typeof window !== "undefined") {
 export default function AuthButton() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [cartCount, setCartCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    console.log("[AuthButton Debug]", { 
+      user, 
+      isAuthenticated, 
+      role: user?.role, 
+      store_id: user?.store_id 
+    });
+  }, [user, isAuthenticated]);
 
   const fetchCartCount = async () => {
     if (!isAuthenticated) {
@@ -107,16 +117,13 @@ export default function AuthButton() {
     );
   }
 
+
+
   // If authenticated as seller, show seller-specific UI
-  if (user?.role === "seller") {
+  if (user?.role === "seller" || user?.role === "admin" || user?.store_id) {
     return (
       <div className="hidden lg:flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-            1
-          </span>
-        </Button>
+        <NotificationBell />
         <Button variant="ghost" size="icon" className="relative" asChild>
           <Link href="/cart">
             <ShoppingCart className="h-5 w-5" />
@@ -138,9 +145,7 @@ export default function AuthButton() {
   // If authenticated as customer, show customer UI with seller registration option
   return (
     <div className="hidden lg:flex items-center gap-4">
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-5 w-5" />
-      </Button>
+      <NotificationBell />
       <Button variant="ghost" size="icon" className="relative" asChild>
         <Link href="/cart">
           <ShoppingCart className="h-5 w-5" />

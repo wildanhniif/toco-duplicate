@@ -139,9 +139,9 @@ const BannerCarouselDynamic = dynamic(
 export default function HomeView() {
   const [bannerImages, setBannerImages] = useState<string[]>([]);
   const [brandBanners, setBrandBanners] = useState<{ id: number; href: string; img: string }[]>([]);
-  const [recomendationProducts, setRecomendationProducts] = useState<
-    RecomendationProductItem[]
-  >([]);
+  const [newArrivals, setNewArrivals] = useState<RecomendationProductItem[]>([]);
+  const [topRated, setTopRated] = useState<RecomendationProductItem[]>([]);
+  const [favorites, setFavorites] = useState<RecomendationProductItem[]>([]);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -176,29 +176,38 @@ export default function HomeView() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/products?status=active&limit=20`
-        );
-        if (!response.ok) {
-          return;
-        }
-        const data = (await response.json()) as ApiProduct[];
-        if (!Array.isArray(data)) {
-          return;
+        const mapProduct = (p: ApiProduct): RecomendationProductItem => ({
+            id: p.product_id ?? p.id ?? 0,
+            title: p.name ?? "Produk",
+            city: p.city ?? "Kota Jakarta",
+            stock: p.stock_quantity ?? 0,
+            price: p.price ?? 0,
+            img: p.primary_image || "/iphone-product.webp",
+            slug: p.slug,
+            discountPercentage: p.discount_percentage,
+        });
+
+        // 1. Pendatang Baru (New Arrivals)
+        const resNew = await fetch(`${API_BASE_URL}/api/products?status=active&sort=created_at_desc&limit=10`);
+        if (resNew.ok) {
+             const data = await resNew.json();
+             if (Array.isArray(data)) setNewArrivals(data.map(mapProduct));
         }
 
-        const mapped: RecomendationProductItem[] = data.map((product) => ({
-          id: product.product_id ?? product.id ?? 0,
-          title: product.name ?? "Produk",
-          city: product.city ?? "Kota Jakarta",
-          stock: product.stock_quantity ?? 0,
-          price: product.price ?? 0,
-          img: product.primary_image || "/iphone-product.webp",
-          slug: product.slug,
-          discountPercentage: product.discount_percentage,
-        }));
+        // 2. Dipilih Khusus (Random / Curated - using Random sort if available, else Price Desc)
+        const resTop = await fetch(`${API_BASE_URL}/api/products?status=active&sort=random&limit=10`);
+         if (resTop.ok) {
+             const data = await resTop.json();
+             if (Array.isArray(data)) setTopRated(data.map(mapProduct));
+        }
 
-        setRecomendationProducts(mapped);
+        // 3. Favorit (Most Viewed/Sold - using Views Desc if available)
+        const resFav = await fetch(`${API_BASE_URL}/api/products?status=active&sort=views_desc&limit=10`);
+         if (resFav.ok) {
+             const data = await resFav.json();
+             if (Array.isArray(data)) setFavorites(data.map(mapProduct));
+        }
+
       } catch (error) {
         console.error("Error fetching homepage products:", error);
       }
@@ -215,7 +224,7 @@ export default function HomeView() {
       <section className="flex items-center w-full lg:mt-10">
         <ul className="flex items-center gap-6 lg:gap-14 overflow-auto py-8">
           {Categories.map((category) => (
-            <Link key={category.title} href="/">
+            <Link key={category.title} href={`/products?q=${category.title}`}>
               <li className="flex flex-col gap-2 items-center">
                 <Image
                   src={category.img}
@@ -232,27 +241,30 @@ export default function HomeView() {
           ))}
         </ul>
       </section>
-      {/* Dipilih Untuk mu */}
+      
+      {/* Dipilih Untuk mu (Random/Special) */}
       <section className="flex flex-col gap-8 lg:gap-10 w-full mt-7 lg:mt-14">
         <h3 className="text-2xl lg:text-3xl">
           Dipilih Khusus <span className="font-bold">Untukmu</span>
         </h3>
-        <ProductCarousel recomendationProducts={recomendationProducts} />
+        <ProductCarousel recomendationProducts={topRated} />
       </section>
-      {/* Pendatang Baru */}
+
+      {/* Pendatang Baru (New Arrivals) */}
       <section className="flex flex-col gap-8 lg:gap-10 w-full mt-7 lg:mt-14">
         <h3 className="text-2xl lg:text-3xl">
           Pendatang <span className="font-bold">Baru</span>
         </h3>
-        <ProductCarousel recomendationProducts={recomendationProducts} />
+        <ProductCarousel recomendationProducts={newArrivals} />
       </section>
+
       {/* Dari Mata ke Hati */}
       <section className="flex flex-col gap-8 lg:gap-10 w-full mt-7 lg:mt-14">
         <h3 className="text-2xl font-bold lg:text-3xl">
           Dari Mata <span className="font-normal">ke Hati</span>
         </h3>
         <ul className="flex items-center gap-8">
-          <Link href="" className="">
+          <Link href="/products?sort=created_at_desc" className="">
             <li className="flex flex-col items-center gap-3">
               <Image
                 src="/tren_terkini.webp"
@@ -266,7 +278,7 @@ export default function HomeView() {
               </p>
             </li>
           </Link>
-          <Link href="" className="">
+          <Link href="/products?min_price=1000000" className="">
             <li className="flex flex-col items-center gap-3">
               <Image
                 src="/upgrade_gadget.webp"
@@ -280,7 +292,7 @@ export default function HomeView() {
               </p>
             </li>
           </Link>
-          <Link href="" className="">
+          <Link href="/products?q=mobil" className="">
             <li className="flex flex-col items-center gap-3">
               <Image
                 src="/mobil_bekas.webp"
@@ -294,7 +306,7 @@ export default function HomeView() {
               </p>
             </li>
           </Link>
-          <Link href="" className="">
+          <Link href="/products?category_id=1" className="">
             <li className="flex flex-col items-center gap-3">
               <Image
                 src="/hunian_impian.webp"
@@ -310,6 +322,7 @@ export default function HomeView() {
           </Link>
         </ul>
       </section>
+
       <section className="flex flex-col gap-8 lg:gap-10 w-full mt-10 lg:mt-14">
         <h3 className="text-2xl lg:text-3xl">
           Buruan Klaim <span className="font-bold">Promonya!</span>
@@ -341,11 +354,13 @@ export default function HomeView() {
           ))}
         </ul>
       </section>
+      
+      {/* Cek Produk Favorit (Most Viewed) */}
       <section className="flex flex-col gap-8 lg:gap-10 w-full mt-7 lg:mt-14">
         <h3 className="text-2xl lg:text-3xl">
           Cek Produk <span className="font-bold">Favorit Tokoo!</span>
         </h3>
-        <ProductCarousel recomendationProducts={recomendationProducts} />
+        <ProductCarousel recomendationProducts={favorites} />
       </section>
 
       <section className="flex flex-col gap-8 lg:gap-10 w-full mt-7 lg:mt-14">

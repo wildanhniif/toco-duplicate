@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
         hostname: "res.cloudinary.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "**", // Allow all HTTPS domains for flexibility with bulk import
+      },
     ],
   },
   async headers() {
@@ -41,7 +45,7 @@ const nextConfig: NextConfig = {
               "default-src 'self';",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline';",
               "style-src 'self' 'unsafe-inline';",
-              "img-src 'self' data: blob: http://localhost:5000 https://res.cloudinary.com;",
+              "img-src 'self' data: blob: http://localhost:5000 https://res.cloudinary.com https://*;",
               "font-src 'self';",
               "connect-src 'self' http://localhost:5000;",
               "frame-src 'self';",

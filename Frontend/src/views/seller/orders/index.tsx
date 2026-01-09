@@ -68,14 +68,14 @@ export default function SellerOrdersView() {
       router.push("/seller/login");
       return;
     }
-    if (user?.role !== "seller") {
+    if (user?.role !== "seller" && user?.role !== "admin") {
       router.push("/");
       return;
     }
   }, [isAuthenticated, isLoading, user, router]);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "seller") return;
+    if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) return;
 
     const fetchOrders = async () => {
       setLoading(true);
@@ -146,7 +146,7 @@ export default function SellerOrdersView() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "seller") {
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
     return null;
   }
 

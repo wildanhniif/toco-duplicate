@@ -148,6 +148,8 @@ const startServer = async () => {
   app.use("/api/templates", templateRoutes);
   app.use("/api/banners", require("./routes/bannerRoutes"));
   app.use("/api/admin", require("./routes/adminRoutes"));
+  app.use("/api/notifications", require("./routes/notificationRoutes"));
+  app.use("/api/articles", require("./routes/articleRoutes"));
   // Serve static uploads (product/store images)
   app.use("/uploads", express.static("uploads"));
   

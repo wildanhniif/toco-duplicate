@@ -26,7 +26,7 @@ export default function SellerStatisticsView() {
       router.push("/seller/login");
       return;
     }
-    if (user?.role !== "seller") {
+    if (user?.role !== "seller" && user?.role !== "admin") {
       router.push("/");
       return;
     }
@@ -40,7 +40,7 @@ export default function SellerStatisticsView() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "seller") {
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
     return null;
   }
 

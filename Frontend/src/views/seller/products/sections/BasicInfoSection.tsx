@@ -32,46 +32,47 @@ export default function BasicInfoSection({
     setUploading(true);
 
     try {
-      const uploadedUrls: string[] = [];
+      const formData = new FormData();
+      // Append all files to 'images' field
+      Array.from(files).forEach((file) => {
+        formData.append("images", file);
+      });
 
-      // Upload each file to backend
-      for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append("image", file);
-
-        const token = localStorage.getItem("auth_token");
-        const response = await fetch(
-          `${API_BASE_URL}/api/upload/image?type=products`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          uploadedUrls.push(data.url);
-        } else {
-          console.error("Failed to upload image:", file.name);
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/upload/images?type=products`, // Use bulk endpoint
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
         }
-      }
+      );
 
-      // Add uploaded URLs to form data
-      if (uploadedUrls.length > 0) {
-        setFormData((prev: any) => ({
-          ...prev,
-          images: [...prev.images, ...uploadedUrls],
-        }));
+      if (response.ok) {
+        const data = await response.json();
+        // data.images is array of { url, public_id, ... }
+        const newUrls = data.images.map((img: any) => img.url);
+
+        if (newUrls.length > 0) {
+          setFormData((prev: any) => ({
+            ...prev,
+            images: [...prev.images, ...newUrls],
+          }));
+        }
+        toast.success("Berhasil upload gambar");
+      } else {
+        const errData = await response.json();
+        console.error("Failed to upload images:", errData);
+        toast.error(errData.message || "Gagal upload gambar. Silakan coba lagi.");
       }
     } catch (error) {
       console.error("Error uploading images:", error);
-      toast.error("Gagal upload gambar. Silakan coba lagi.");
+      toast.error("Terjadi kesalahan saat upload gambar.");
     } finally {
       setUploading(false);
-      // Reset input
+      // Reset input value to allow re-uploading same file if needed
       e.target.value = "";
     }
   };

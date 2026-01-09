@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // Rate limiter untuk file uploads - lebih ketat
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 uploads per 15 minutes
+  max: 100, // Limit each IP to 100 uploads per 15 minutes
   message: {
     success: false,
     message: "Too many file uploads from this IP, please try again later.",

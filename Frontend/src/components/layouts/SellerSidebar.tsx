@@ -75,7 +75,7 @@ const menuItems: MenuItem[] = [
     children: [
       {
         title: "Informasi Toko",
-        href: "/seller/store/settings",
+        href: "/seller/settings?type=info",
         icon: <Settings className="h-4 w-4" />,
       },
       {

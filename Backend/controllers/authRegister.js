@@ -55,14 +55,14 @@ const register = async (req, res) => {
         });
       }
       
-      // Check if full name exists (Requested by user)
-      const nameExists = existingUsers.some(user => user.full_name === fullName);
-      if (nameExists) {
-        validationErrors.push({
-          path: "fullName",
-          msg: "Nama Lengkap sudah terdaftar. Gunakan nama lain."
-        });
-      }
+      // Check if full name exists (Requested by user) - REMOVED for better UX
+      // const nameExists = existingUsers.some(user => user.full_name === fullName);
+      // if (nameExists) {
+      //   validationErrors.push({
+      //     path: "fullName",
+      //     msg: "Nama Lengkap sudah terdaftar. Gunakan nama lain."
+      //   });
+      // }
     }
 
     // Return all collected errors if any

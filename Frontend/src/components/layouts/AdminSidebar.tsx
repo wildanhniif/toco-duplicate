@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   ExternalLink,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -35,6 +36,11 @@ const menuItems = [
     title: "Banner",
     href: "/admin/banners",
     icon: <ImageIcon className="h-5 w-5" />,
+  },
+  {
+    title: "Artikel",
+    href: "/admin/articles",
+    icon: <FileText className="h-5 w-5" />,
   },
 ];
 

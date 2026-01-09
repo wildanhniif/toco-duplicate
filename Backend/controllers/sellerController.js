@@ -90,7 +90,8 @@ exports.registerSeller = async (req, res) => {
 
     const user = users[0];
 
-    if (user.role === "seller") {
+    // Cek apakah user sudah menjadi seller atau admin
+    if (user.role === "seller" || user.role.includes("seller") || user.role.includes("admin")) {
       await connection.rollback();
       return res.status(409).json({
         message: "Anda sudah terdaftar sebagai seller.",
@@ -101,9 +102,17 @@ exports.registerSeller = async (req, res) => {
     // Check if user already has a store but role is still customer
     if (user.store_id) {
       console.log("User has store but role is not seller. Updating role...");
-      // Update role user menjadi 'seller'
+      
+      // Determine new role (preserve admin if exists)
+      let newRole = 'seller';
+      const currentRole = (user.role || '').toLowerCase();
+      if (currentRole.includes('admin')) {
+        newRole = 'admin,seller'; // Dual role
+      }
+      
+      // Update role user
       await connection.execute("UPDATE users SET role = ? WHERE user_id = ?", [
-        "seller",
+        newRole,
         userId,
       ]);
 
@@ -118,7 +127,7 @@ exports.registerSeller = async (req, res) => {
       const payload = {
         user_id: userId,
         name: userDetails[0].full_name,
-        role: "seller",
+        role: newRole,
         store_id: user.store_id,
       };
 
@@ -133,9 +142,16 @@ exports.registerSeller = async (req, res) => {
       });
     }
 
-    // Update role user menjadi 'seller'
+      // Determine new role (preserve admin if exists)
+      let newRole = 'seller';
+      const currentRole = (user.role || '').toLowerCase();
+      if (currentRole.includes('admin')) {
+        newRole = 'admin,seller'; // Dual role
+      }
+
+    // Update role user
     await connection.execute("UPDATE users SET role = ? WHERE user_id = ?", [
-      "seller",
+      newRole,
       userId,
     ]);
 
@@ -159,7 +175,7 @@ exports.registerSeller = async (req, res) => {
     const payload = {
       user_id: userId,
       name: userDetails[0].full_name,
-      role: "seller",
+      role: newRole,
       store_id: storeResult.insertId,
     };
 
@@ -237,8 +253,17 @@ exports.updateStoreDetails = async (req, res) => {
 
   const connection = await db.getConnection();
 
-  let profileImageUrl;
-  let backgroundImageUrl;
+  // Handle Image Uploads
+  if (req.files) {
+    if (req.files.profile_image) {
+       const result = await uploadBufferToCloudinary(req.files.profile_image[0].buffer, 'toco-seller/stores');
+       profileImageUrl = result.secure_url;
+    }
+    if (req.files.background_image) {
+       const result = await uploadBufferToCloudinary(req.files.background_image[0].buffer, 'toco-seller/stores');
+       backgroundImageUrl = result.secure_url;
+    }
+  }
 
   try {
     await connection.beginTransaction();

@@ -264,7 +264,7 @@ export default function AdminBanners() {
   };
 
   return (
-    <AdminLayout>
+    <div className="p-8 max-w-7xl mx-auto">
         <div className="p-6">
         <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Manajemen Banner</h1>
@@ -472,6 +472,6 @@ export default function AdminBanners() {
             </DialogContent>
         </Dialog>
         </div>
-    </AdminLayout>
+    </div>
   );
 }

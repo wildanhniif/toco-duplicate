@@ -94,7 +94,7 @@ const validateRegister = [
     .trim()
     .notEmpty().withMessage('Full name is required')
     .isLength({ min: 2, max: 100 }).withMessage('Full name must be 2-100 characters')
-    .matches(/^[a-zA-Z\s.'-]+$/).withMessage('Full name contains invalid characters'),
+    .matches(/^[a-zA-Z0-9\s.'-]+$/).withMessage('Full name contains invalid characters'),
   ...validateEmail,
   ...validatePhone,
   ...validatePassword,

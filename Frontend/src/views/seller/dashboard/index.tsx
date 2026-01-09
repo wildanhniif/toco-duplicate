@@ -88,7 +88,9 @@ export default function SellerDashboardView() {
       return;
     }
 
-    if (user?.role !== "seller") {
+    // Check if user has permission (seller or admin)
+    const currentRole = user?.role || "";
+    if (currentRole !== "seller" && currentRole !== "admin" && !currentRole.includes("seller")) {
       window.location.href = "/";
       return;
     }
@@ -97,7 +99,7 @@ export default function SellerDashboardView() {
   // Fetch dashboard stats
   useEffect(() => {
     const fetchDashboardStats = async () => {
-      if (!isAuthenticated || user?.role !== "seller") return;
+      if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) return;
 
       const authToken = localStorage.getItem("auth_token");
       if (!authToken) return;
@@ -130,7 +132,7 @@ export default function SellerDashboardView() {
   // Fetch store information
   useEffect(() => {
     const fetchStoreInfo = async () => {
-      if (!isAuthenticated || user?.role !== "seller") return;
+      if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) return;
 
       const authToken = localStorage.getItem("auth_token");
       if (!authToken) return;
@@ -165,7 +167,7 @@ export default function SellerDashboardView() {
     return <div>Loading...</div>;
   }
 
-  if (!isAuthenticated || user?.role !== "seller") {
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin" && !user?.role?.includes("seller"))) {
     // Redirect sudah di-trigger di useEffect
     return null;
   }

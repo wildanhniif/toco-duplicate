@@ -173,7 +173,7 @@ export default function CategoryManagementPage() {
   };
 
   return (
-    <AdminLayout>
+    <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manajemen Kategori</h1>
         <Dialog open={isDialogOpen} onOpenChange={(v) => { setIsDialogOpen(v); if(!v) resetForm(); }}>
@@ -281,6 +281,6 @@ export default function CategoryManagementPage() {
           Next
         </Button>
       </div>
-    </AdminLayout>
+    </div>
   );
 }

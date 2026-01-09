@@ -32,7 +32,7 @@ export default function SellerSettingsView() {
       return;
     }
 
-    if (user?.role !== "seller") {
+    if (user?.role !== "seller" && user?.role !== "admin") {
       router.push("/");
       return;
     }
@@ -47,7 +47,7 @@ export default function SellerSettingsView() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "seller") {
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
     return null;
   }
 

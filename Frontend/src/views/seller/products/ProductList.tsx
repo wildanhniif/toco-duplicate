@@ -14,6 +14,7 @@ import {
   Eye,
   Heart,
   ShoppingCart,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -400,12 +401,20 @@ const ProductListView: React.FC = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Daftar Produk</h1>
-            <Link href="/seller/products/add">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Tambah Produk
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/seller/products/bulk-import">
+                <Button variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Produk
+                </Button>
+              </Link>
+              <Link href="/seller/products/add">
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Tambah Produk
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -685,13 +694,18 @@ const ProductListView: React.FC = () => {
 
                       {/* Product Info */}
                       <div className="flex-1 flex items-center gap-4">
-                        <div className="relative w-20 h-20 rounded-lg overflow-hidden">
-                          <Image
-                            src={product.image_url || "/placeholder.png"}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                          />
+                        <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                          {product.image_url ? (
+                            <Image
+                              src={product.image_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              unoptimized={!product.image_url.includes('localhost') && !product.image_url.includes('cloudinary')}
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400">No Image</span>
+                          )}
                         </div>
                         <div className="flex-1 space-y-1">
                           <h3 className="font-medium">{product.name}</h3>

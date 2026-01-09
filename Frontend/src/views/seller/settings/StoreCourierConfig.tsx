@@ -58,7 +58,7 @@ export default function StoreCourierConfigView() {
   // Auth check
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated || user?.role !== "seller") {
+      if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
         router.push("/login");
       }
     }

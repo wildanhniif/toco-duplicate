@@ -144,7 +144,7 @@ export default function ProductFormView({ productId }: ProductFormViewProps) {
   // Auth check
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated || user?.role !== "seller") {
+    if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
       router.push("/login");
       return;
     }
@@ -478,7 +478,8 @@ export default function ProductFormView({ productId }: ProductFormViewProps) {
                    [v.variant_name]: v.variant_value
                },
                weight_gram: payload.weight_gram, // Inherit from main product
-               dimensions: payload.dimensions
+               dimensions: payload.dimensions,
+               image_url: v.image_url || null,
            }));
 
             // Sync total stock
@@ -549,7 +550,7 @@ export default function ProductFormView({ productId }: ProductFormViewProps) {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "seller") {
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) {
     return null;
   }
 

@@ -62,23 +62,26 @@ export default function RegisterForm() {
         if (data?.errors && Array.isArray(data.errors)) {
            const newFieldErrors: { [key: string]: string } = {};
            data.errors.forEach((err: any) => {
-             if (err.path === "password") { 
-                 newFieldErrors["password"] = err.msg;
-             } else if (err.path === "phoneNumber") {
-                 newFieldErrors["phoneNumber"] = err.msg;
-             } else if (err.path === "email") {
-                 newFieldErrors["email"] = err.msg;
-             } else if (err.path === "fullName") {
-                 newFieldErrors["fullName"] = err.msg;
-             } else if (err.path === "confirmPassword") {
-                 newFieldErrors["confirmPassword"] = err.msg;
+             const field = err.path || err.field;
+             const msg = err.msg || err.message;
+             
+             if (field === "password") { 
+                 newFieldErrors["password"] = msg;
+             } else if (field === "phoneNumber") {
+                 newFieldErrors["phoneNumber"] = msg;
+             } else if (field === "email") {
+                 newFieldErrors["email"] = msg;
+             } else if (field === "fullName") {
+                 newFieldErrors["fullName"] = msg;
+             } else if (field === "confirmPassword") {
+                 newFieldErrors["confirmPassword"] = msg;
              }
            });
            setFieldErrors(newFieldErrors);
            
            // Fallback global error if array exists but no specific fields match or generic message needed
            if (Object.keys(newFieldErrors).length === 0) {
-               setError(data.errors[0]?.msg || "Registrasi gagal.");
+               setError(data.errors[0]?.msg || data.errors[0]?.message || "Registrasi gagal.");
            }
         } else {
             setError(data?.message || "Registrasi gagal. Silakan periksa kembali data Anda.");

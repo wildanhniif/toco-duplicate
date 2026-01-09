@@ -44,6 +44,7 @@ interface OrderItem {
 interface Order {
   order_id: number;
   order_code: string;
+  order_number?: string; // Add optional order_number
   store_id: number;
   store_name: string;
   status: string;
@@ -161,15 +162,16 @@ export default function UserOrdersPage() {
   const fetchOrderStats = async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${API_BASE_URL}/api/orders/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
-      }
+      // Temporarily disabled - endpoint not implemented
+      // const res = await fetch(`${API_BASE_URL}/api/orders/stats`, {
+      //   headers: { Authorization: `Bearer ${token}` },
+      // });
+      // if (res.ok) {
+      //   const data = await res.json();
+      //   setStats(data);
+      // }
     } catch (e) {
-      console.error("Error fetching order stats:", e);
+      console.error("Error fetching stats:", e);
     }
   };
 
@@ -245,7 +247,7 @@ export default function UserOrdersPage() {
   const handlePayNow = async (orderId: number) => {
     try {
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`${API_BASE_URL}/api/payment/init`, {
+      const res = await fetch(`${API_BASE_URL}/api/payments/init`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -262,7 +264,8 @@ export default function UserOrdersPage() {
           toast.info("Silakan selesaikan pembayaran");
         }
       } else {
-        toast.error("Gagal memulai pembayaran");
+        const errData = await res.json();
+        toast.error(errData.message || "Gagal memulai pembayaran");
       }
     } catch (e) {
       console.error("Error initiating payment:", e);
